@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300&display=swap" rel="stylesheet">
+
+  <title>almaloox001</title>
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="stylesheet" type="text/css" href="style.css">
+
+  <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+  <link rel="shortcut icon" href="android-icon.png" sizes="196x196">
+  <script src="script.js"></script>
+</head>
+
+<body>
+
+  <div class="header">
+    <b>almaloox</b>&nbsp;tune
+  </div>
+  <div class="site-container">
+    <div class="slideshow-container">
+      <div class="arrows">
+        </div>
+          <div id="slide-1" class="slide-container">
+
+            <img src="LOGO1.svg">
+
+
+
+            <div id="caption">almaloox energy VII</div>
+          </div>
+          <div class="arrows">></div>
+      </div>
+
+
+
+
+
+    <div id="wifi-list">
+        <!-- Wi-Fi networks will be listed here -->
+    </div>
+
+    <button id="scanWiFi">Search for Wi-Fi Networks</button>
+    <div class="spinner-container">
+        <div class="spinner" id="spinner"></div>
+    </div>
+
+    <label for="ssid">SSID:</label>
+    <input type="text" id="ssid" name="ssid" placeholder="SSID" required aria-label="SSID">
+
+
+    <label for="password">Password:</label>
+    <input type="text" id="password" name="password" placeholder="Password" required aria-label="Password">
+    <label>
+        <input type="checkbox" id="toggle-password"> Show Password
+    </label>
+    <br>
+    <button id="saveWifiButton">Save</button>
+    <div class="spinner-container">
+        <div class="spinner" id="spinner"></div>
+    </div>
+  </div>
+
+
+<script>
+        async function getWifiCredentials() {
+            try {
+                const data = await fetchData('/getWifiCredentials');
+                console.log('Received data:', data);
+
+                const fieldsToUpdate = ['ssid', 'password', 'wifi_ip'];
+                fieldsToUpdate.forEach(field => updateFieldValue(field, data));
+
+                if (data.password === "gotPassword") {
+                    document.getElementById('password').value = "*************";
+                }
+
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        function updateFieldValue(fieldId, data) {
+            const element = document.getElementById(fieldId);
+            if (element) {
+                element.value = data[fieldId] || '';
+            }
+        }
+
+
+
+        async function handleButtonClick(buttonElement, endpoint, formData) {
+            toggleSpinner(buttonElement, true);
+
+            try {
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formData)
+                });
+
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                updateButtonAfterSuccess(buttonElement, 'Connecting!');
+
+                if (endpoint === '/credWifi' || endpoint === '/credSWifi') {
+                    setTimeout(() => {
+                        alert("Connect to selected WiFi and connect again with " + document.getElementById('devicename').value + ".local");
+                        window.location.href = 'http://' + document.getElementById('devicename').value + '.local';
+                    }, 1000);
+                } else {
+                    setTimeout(() => {
+                        updateButtonAfterSuccess(buttonElement, 'Saved!');
+                    }, 1000);
+                }
+
+            } catch (error) {
+                updateButtonAfterError(buttonElement, 'Error');
+            } finally {
+                resetButtonAfterDelay(buttonElement, 'Save', 3000);
+            }
+        }
+
+        function attachEventListeners() {
+
+            document.getElementById('saveWifiButton').addEventListener('click', handleSaveWifi);
+            document.getElementById('toggle-password').addEventListener('change', handlePasswordVisibilityToggle);
+
+            document.getElementById('scanWiFi').addEventListener('click', handleWifiScan);
+        }
+
+        function addChangeListener(id) {
+            const e = document.getElementById(id);
+            e.addEventListener('change', () => {
+                sendFieldData(id, '/updateFieldData');
+            });
+        }
+
+        function handleSaveWifi() {
+            const formData = {
+                ssid: document.getElementById('ssid').value,
+                password: document.getElementById('password').value
+            };
+            handleButtonClick(this, '/credWifi', formData);
+        }
+
+
+
+
+
+        function updateWifiList(networks) {
+            const wifiList = document.getElementById('wifi-list');
+            wifiList.innerHTML = ''; // Clear existing list
+
+            const list = document.createElement('ul');
+            list.style.listStyle = 'none';
+            list.style.padding = '0';
+
+            networks.forEach(network => {
+                const listItem = document.createElement('li');
+
+                // Applying styles based on the current theme
+                if (document.body.classList.contains('dark-mode')) {
+                    // Styles for dark mode
+                    listItem.style.border = '1px solid #3498db'; // Blue border
+                    listItem.style.backgroundColor = '#000'; // Dark background
+                    listItem.style.color = '#fff'; // White text
+                } else {
+                    // Styles for light mode
+                    listItem.style.border = '1px solid #ccc'; // Light grey border
+                    listItem.style.backgroundColor = '#f9f9f9'; // Light background
+                    listItem.style.color = '#333'; // Dark text
+                }
+
+                listItem.style.margin = '5px 0';
+                listItem.style.padding = '10px';
+                listItem.style.cursor = 'pointer';
+
+                listItem.onclick = function () {
+                    document.getElementById('ssid').value = network.ssid;
+                    document.getElementById('password').focus();
+                };
+
+                const ssidElement = document.createElement('div');
+                ssidElement.textContent = `SSID: ${network.ssid}`;
+                listItem.appendChild(ssidElement);
+
+                const signalElement = document.createElement('div');
+                signalElement.textContent = `Signal: ${getSignalStrength(network.rssi)}`;
+                listItem.appendChild(signalElement);
+
+                const encryptionElement = document.createElement('div');
+                encryptionElement.textContent = `Encryption: ${getEncryptionType(network.encryption)}`;
+                listItem.appendChild(encryptionElement);
+
+                list.appendChild(listItem);
+            });
+
+            wifiList.appendChild(list);
+        }
+
+        function getEncryptionType(encryptionType) {
+            switch (encryptionType) {
+                case 0: return 'Open';
+                case 1: return 'WEP';
+                case 2: return 'WPA PSK';
+                case 3: return 'WPA2 PSK';
+                case 4: return 'WPA/WPA2 PSK';
+                case 5: return 'WPA2 Enterprise';
+                case 6: return 'Max';
+                default: return 'Unknown';
+            }
+        }
+
+        function getSignalStrength(rssi) {
+            if (rssi >= -50) {
+                return 'Excellent';
+            } else if (rssi >= -60) {
+                return 'Very Good';
+            } else if (rssi >= -70) {
+                return 'Good';
+            } else if (rssi >= -80) {
+                return 'Moderate';
+            } else {
+                return 'Weak';
+            }
+        }
+
+
+        function handlePasswordVisibilityToggle() {
+            const password = document.getElementById('password');
+            password.type = this.checked ? 'text' : 'password';
+        }
+
+        function handleWifiScan() {
+            toggleSpinner(this, true);
+            performWifiScan(this);
+        }
+
+        async function performWifiScan(button) {
+            try {
+                const response = await fetch('/doScanWiFi');
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                const data = await response.json();
+                updateWifiList(data);
+            } catch (error) {
+                console.error('Error:', error);
+            } finally {
+                toggleSpinner(button, false);
+            }
+        }
+
+
+
+
+        function updateButtonAfterSuccess(button, message) {
+            button.style.backgroundColor = '#4CAF50'; // Green color
+            button.innerText = message;
+        }
+
+        function updateButtonAfterError(button, message) {
+            console.error('Error:', error);
+            button.style.backgroundColor = '#ff4c4c'; // Red color
+            button.innerText = message;
+        }
+
+        function resetButtonAfterDelay(button, message, delay) {
+            setTimeout(() => {
+                toggleSpinner(button, false);
+                button.style.backgroundColor = ''; // Reset button color
+                button.innerText = message;
+            }, delay);
+        }
+
+
+
+        function toggleSpinner(e, show) {
+            let spinner = e.nextElementSibling.querySelector('.spinner');
+            spinner.style.display = show ? 'inline-block' : 'none';
+            e.style.display = show ? 'none' : 'inline-block';
+        }
+
+        async function fetchData(url) {
+            const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            return await response.json();
+        }
+
+        function constructPayload(fieldId, fieldValue) {
+            const [buttonPrefix, propertyName] = fieldId.split('_');
+            if (propertyName) {
+                return { [buttonPrefix]: { [propertyName]: fieldValue } };
+            }
+            return { [buttonPrefix]: fieldValue };
+        }
+
+        async function postJsonData(url, data) {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            return await response.text();
+        }
+</script>
+     
+</body>
+
+</html>

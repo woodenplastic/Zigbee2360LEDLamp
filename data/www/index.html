@@ -1,0 +1,75 @@
+<html lang="en"><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300&display=swap" rel="stylesheet">
+
+<head>
+    <title>almaloox001</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="stylesheet" type="text/css" href="style.css">
+
+    <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+    <link rel="shortcut icon" href="android-icon.png" sizes="196x196">
+
+</head>
+  
+  <body>
+  
+  <div class="header">
+    <b>almaloox</b>&nbsp;tune
+  </div>
+  <div class="site-container">
+  <div class="slideshow-container">
+    <div class="arrows"><</div>
+    <div id="slide-1" class="slide-container">
+    
+      <img src="LOGO1.svg">
+      
+   
+
+    <div id="caption">almaloox energy VII</div>
+  </div>
+    <div class="arrows">></div>
+  </div>
+  
+  <div class="slider-container">
+    <div class="slider-label">front</div>
+    <div class="slider slider1">
+        <input type="range" oninput="updateSliderPWM(this)" id="slider1" min="0" max="100" step="1" value="50" class="slider">
+        <p class="state">Brightness: <span id="sliderValue1"></span> &percnt;</p>
+    </div>
+    <div class="slider slider2">
+        <input type="range" oninput="updateSliderPWM(this)" id="slider2" min="0" max="100" step="1" value="50">
+        <p class="state">Brightness: <span id="sliderValue2"></span> &percnt;</p>
+    </div>
+  </div>
+  
+  <div class="slider-container">
+    <div class="slider-label">aura</div>
+    <div class="slider aura-slider1">
+        <input type="range" oninput="updateSliderPWM(this)" id="slider3" min="0" max="100" step="1" value="50">
+        <p class="state">Brightness: <span id="sliderValue3"></span> &percnt;</p>
+    </div>
+    <div class="slider aura-slider2">
+        <input type="range" oninput="updateSliderPWM(this)" id="slider4" min="0" max="100" step="1" value="50">
+        <p class="state">Brightness: <span id="sliderValue4"></span> &percnt;</p>
+    </div>
+  </div>
+  
+  <div class="site-container">
+    <div class="slideshow-container">
+      <div class="arrows"><</div>
+      <div id="slide-1" class="slide-container">
+        
+        <img src="LOGO.svg">
+  
+    </div>
+      <div class="arrows">></div>
+    </div>
+  
+  
+    <script src="script.js"></script>
+  </body></html>
