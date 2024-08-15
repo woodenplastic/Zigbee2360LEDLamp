@@ -35,28 +35,8 @@
     <div class="arrows">></div>
   </div>
   
-  <div class="slider-container">
-    <div class="slider-label">front</div>
-    <div class="slider slider1">
-        <input type="range" oninput="updateSliderPWM(this)" id="slider1" min="0" max="100" step="1" value="50" class="slider">
-        <p class="state">Brightness: <span id="sliderValue1"></span> &percnt;</p>
-    </div>
-    <div class="slider slider2">
-        <input type="range" oninput="updateSliderPWM(this)" id="slider2" min="0" max="100" step="1" value="50">
-        <p class="state">Brightness: <span id="sliderValue2"></span> &percnt;</p>
-    </div>
-  </div>
-  
-  <div class="slider-container">
-    <div class="slider-label">aura</div>
-    <div class="slider aura-slider1">
-        <input type="range" oninput="updateSliderPWM(this)" id="slider3" min="0" max="100" step="1" value="50">
-        <p class="state">Brightness: <span id="sliderValue3"></span> &percnt;</p>
-    </div>
-    <div class="slider aura-slider2">
-        <input type="range" oninput="updateSliderPWM(this)" id="slider4" min="0" max="100" step="1" value="50">
-        <p class="state">Brightness: <span id="sliderValue4"></span> &percnt;</p>
-    </div>
+  <div id="sliderContainers">
+    
   </div>
   
   <div class="site-container">

@@ -12,9 +12,8 @@ int ConfigData::calculateState(bool in, bool out)
   return (out << 1) | in;
 }
 
-
-
-void ConfigData::make(JsonDocument& doc) {
+void ConfigData::make(JsonDocument &doc) {
+    serializeJsonPretty(doc, Serial);
 
     useStaticEth = doc["useStaticEth"];
     useStaticWiFi = doc["useStaticWiFi"];
@@ -33,7 +32,18 @@ void ConfigData::make(JsonDocument& doc) {
     Swifi_dns.fromString(doc["Swifi_dns"].as<String>());
     Swifi_subnet.fromString(doc["Swifi_sub"].as<String>());
 
+    for (JsonObject leds : doc["leds"].as<JsonArray>()) {
+        
+        size_t i = leds["index"].as<size_t>();
+        ledData *led = getLedData(i);
+        led->warmPin = leds["warmPin"].as<uint8_t>();
+        led->coldPin = leds["coldPin"].as<uint8_t>();
+        led->warmChannel = leds["warmChannel"].as<uint8_t>();
+        led->coldChannel = leds["coldChannel"].as<uint8_t>();
+        led->warmCycle = leds["warmCycle"].as<uint32_t>();
+        led->coldCycle = leds["coldCycle"].as<uint32_t>();
 
+    }
 
 }
 
@@ -55,10 +65,23 @@ JsonDocument ConfigData::get() {
     doc["Swifi_gw"] = Swifi_gw.toString();
     doc["Swifi_dns"] = Swifi_dns.toString();
 
+    JsonArray leds = doc["leds"].to<JsonArray>();
 
+    for (size_t i = 0; i < LEDCOUNT; ++i) {   
+        const ledData *led = getLedData(i);
+        if (led != nullptr) {
+            JsonObject obj = leds.add<JsonObject>();
+            obj["index"] = i;
+            obj["warmPin"] = led->warmPin;
+            obj["coldPin"] = led->coldPin;
+            obj["warmChannel"] = led->warmChannel;
+            obj["coldChannel"] = led->coldChannel;
+            obj["warmCycle"] = led->warmCycle;
+            obj["coldCycle"] = led->coldCycle;
+        }
+    }
 
-
-
+    serializeJsonPretty(doc, Serial);
     return doc;
 }
 
@@ -117,4 +140,17 @@ void ConfigData::load(const char* filePath) {
 
     loadFromFilesystem(LittleFS, "LittleFS");
 
+}
+
+
+ledData* ConfigData::getLedData(size_t index) {
+    if (index < 0) {
+        return nullptr;
+    }
+
+    if (index >= lampdata.size()) {
+        lampdata.resize(index + 1);
+    }
+    return &lampdata[index];
+    Serial.println("made LED DATA");
 }

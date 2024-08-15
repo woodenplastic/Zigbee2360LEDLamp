@@ -1,5 +1,20 @@
 #include <Arduino.h>
 
+
+#include <stdarg.h>
+
+#include <initializer_list>
+
+#include "DRFZigbee.h"
+#include "M5Stack.h"
+#include "byteArray.h"
+#include "resource.h"
+
+
+
+
+
+
 #include <WiFi.h>
 #include <WiFiClient.h>
 #include <WiFiUdp.h>
@@ -58,31 +73,16 @@ const int MANUAL_TRIGGER_BIT = BIT0;
 const int SYNC_CLIENTS_BIT = BIT1;
 
 
-#define LED_PIN_1 14
-#define LED_PIN_2 15
-#define LED_PIN_3 16
-#define LED_PIN_4 0
+void setLedDutyCycle(size_t i) {
+    ledData* led = configData.getLedData(i);
+    // Constrain the values to be within the PWM range (0-255)
+    int pwm1 = constrain(led->warmCycle * 0.25, 0, 255);
+    int pwm2 = constrain(led->coldCycle * 0.25, 0, 255);
 
-
-
-
-
-
-
-void setLedDutyCycle(int ledPin1, int ledPin2, int dutyCycle1, int dutyCycle2) {
-  float flag1 = 0.25 * dutyCycle1;
-  float flag2 = 0.25 * dutyCycle2;
-  int pwm1 = flag1 * 0.001 * flag2;
-  int pwm2 = flag1 * 0.001 * (250 - flag2);
-
-  analogWrite(ledPin1, pwm1);
-  analogWrite(ledPin2, pwm2);
+    // Write the PWM values to the specified channels
+    ledcWrite(led->warmChannel, pwm1);
+    ledcWrite(led->coldChannel, pwm2);
 }
-
-
-
-
-
 
 
 // NETWORK ///////////////////////////////////////////////////////////////////////
@@ -242,7 +242,7 @@ void checkNetwork(void *parameter)
       {
         WiFi.softAPConfig(apIP, apIP, IPAddress(255, 255, 255, 0));
       }
-      WiFi.softAP(configData.devicename, softAP_password);
+      WiFi.softAP(/*configData.devicename*/ "MAIKO", softAP_password);
       dnsServer.start(DNS_PORT, "*", apIP);
     }
 
@@ -294,8 +294,10 @@ void serverInit()
   // handler->setFilter(ON_STA_FILTER);
   handler->setCacheControl("max-age=60");
 
-  websocketHandler.onOpen([](PsychicWebSocketClient *client)
-                          { logger.log(STOMPCS, DEBUG, "[socket] connection #%u connected from %s\n", client->socket(), client->remoteIP().toString()); });
+  websocketHandler.onOpen([](PsychicWebSocketClient *client) { 
+    logger.log(STOMPCS, DEBUG, "[socket] connection #%u connected from %s\n", client->socket(), client->remoteIP().toString()); 
+    xTaskNotifyGive(syncClientsHandle);
+  });
 
   websocketHandler.onFrame([](PsychicWebSocketRequest *request, httpd_ws_frame *frame)
                            {
@@ -309,10 +311,14 @@ void serverInit()
       JsonObject obj = doc["slider"];
       if(!obj.isNull()) {
         int index = obj["index"];
-        int value = obj["value"];
-        Sliders* slider = getSlider(slidersList, index);
-        slider->value = value;
-        slider->cycle = map(value, 0, 100, 0, 1023);
+        int warmCycle = obj["warmCycle"];
+        int coldCycle = obj["coldCycle"];
+        ledData* led = configData.getLedData(0);
+        led->warmCycle = warmCycle;
+        led->coldCycle = coldCycle;
+        lastInputTime = millis();
+        CONFIG_SAVED = false;
+
       }
 
 
@@ -404,7 +410,7 @@ void setup()
 
 #ifdef ST_DEBUG
   Serial.begin(115200);
-  logger.registerSerial(STOMPCS, DEBUG, "tst"); // We want messages with DEBUG level and lower    delay(1000);
+  logger.registerSerial(STOMPCS, DEBUG, "MAIKO"); // We want messages with DEBUG level and lower    delay(1000);
 #endif
 
 #ifdef WROVER
@@ -412,19 +418,41 @@ void setup()
 #endif
 
 
-  pinMode(LED_PIN_1, OUTPUT);
-  pinMode(LED_PIN_2, OUTPUT);
-  pinMode(LED_PIN_3, OUTPUT);
-  pinMode(LED_PIN_4, OUTPUT);
-
-
-  if (!storageManager.mountLittleFS())
-  {
+  if (!storageManager.mountLittleFS()) {
     logger.log(STOMPCS, ERROR, "File System Mount Failed");
     return;
+  } else {
+    configData.load("/config.json");
+
   }
 
-  configData.load("/config.json");
+
+
+  strncpy(configData.devicename, "MAIKO", sizeof(configData.devicename));
+
+    ledData* led1 = configData.getLedData(0);
+    ledData* led2 = configData.getLedData(1);
+
+    led1->warmChannel = 0;
+    led1->coldChannel = 1;
+    led1->warmPin = 25;
+    led1->coldPin = 26;
+
+    led2->warmChannel = 2;
+    led2->coldChannel = 3;
+    led2->warmPin = 27;
+    led2->coldPin = 14;   
+
+
+  for(size_t i; i < LEDCOUNT; i++) {
+    ledData* led = configData.getLedData(i);
+    ledcSetup(led->warmChannel, pwmFreq,pwmResolution);
+    ledcSetup(led->coldChannel, pwmFreq,pwmResolution);
+    ledcAttachPin(led->warmPin, led->warmChannel);
+    ledcAttachPin(led->coldPin, led->warmChannel);
+  }
+
+configData.save("/config.json");
 
   WiFi.onEvent(WiFiEvent);
 
@@ -450,16 +478,13 @@ void setup()
   xTaskCreate(syncClients, "Sync CLients", 4096, NULL, 1, &syncClientsHandle);
   xEventGroupSetBits(networkEventGroup, MANUAL_TRIGGER_BIT);
 }
-void loop()
-{
+void loop() {
   // DNS server processing for AP mode
-  if (WiFi.getMode() == WIFI_AP || WiFi.getMode() == WIFI_AP_STA)
-  {
+  if (WiFi.getMode() == WIFI_AP || WiFi.getMode() == WIFI_AP_STA) {
     dnsServer.processNextRequest();
   }
-  Sliders* sliderValues = slidersList.data();
 
-  setLedDutyCycle(LED_PIN_1, LED_PIN_2, slidersList[0].cycle, slidersList[1].cycle);
-  setLedDutyCycle(LED_PIN_3, LED_PIN_4, slidersList[2].cycle, slidersList[3].cycle);
-
+  for (size_t i; i < LEDCOUNT; i++) {
+    setLedDutyCycle(i);
+  }
 }
