@@ -48,7 +48,10 @@ DNSServer dnsServer;
 #define NET_TIMEOUT_MS 20000
 #define WIFI_RECOVER_TIME_MS 30000
 
+// HERE PASSWORD FOR AP // SSID = MAIKO
 const char *softAP_password = "12345678";
+
+
 const int maxScanAttempts = 1;
 const int scanInterval = 3000; // Scan every 3 seconds
 
