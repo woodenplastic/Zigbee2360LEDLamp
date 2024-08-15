@@ -8,7 +8,7 @@
 #include "DRFZigbee.h"
 #include "M5Stack.h"
 #include "byteArray.h"
-#include "resource.h"
+
 
 
 
@@ -58,7 +58,7 @@ bool CONFIG_SAVED = true;        // Initialize as true to prevent immediate savi
 const unsigned int localPort = 53000; // local port to listen for OSC packets (actually not used for sending)
 
 #include <ELog.h>
-#define STOMPCS 0
+#define MAIKO 0
 
 SemaphoreHandle_t sema_Server = NULL;
 
@@ -111,51 +111,51 @@ void WiFiEvent(WiFiEvent_t event)
   switch (event)
   {
   case ARDUINO_EVENT_WIFI_READY:
-    logger.log(STOMPCS, INFO, "WiFi Ready");
+    logger.log(MAIKO, INFO, "WiFi Ready");
     break;
   case ARDUINO_EVENT_WIFI_SCAN_DONE:
-    logger.log(STOMPCS, INFO, "WiFi Scan Done");
+    logger.log(MAIKO, INFO, "WiFi Scan Done");
     break;
   case ARDUINO_EVENT_WIFI_STA_START:
-    logger.log(STOMPCS, INFO, "WiFi STA Started");
+    logger.log(MAIKO, INFO, "WiFi STA Started");
     break;
   case ARDUINO_EVENT_WIFI_STA_STOP:
-    logger.log(STOMPCS, INFO, "WiFi STA Stopped");
+    logger.log(MAIKO, INFO, "WiFi STA Stopped");
     break;
   case ARDUINO_EVENT_WIFI_STA_CONNECTED:
-    logger.log(STOMPCS, INFO, "WiFi Connected");
+    logger.log(MAIKO, INFO, "WiFi Connected");
     break;
   case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
-    logger.log(STOMPCS, INFO, "WiFi Disconnected");
+    logger.log(MAIKO, INFO, "WiFi Disconnected");
     break;
   case ARDUINO_EVENT_WIFI_STA_AUTHMODE_CHANGE:
-    logger.log(STOMPCS, INFO, "WiFi Auth Mode Changed");
+    logger.log(MAIKO, INFO, "WiFi Auth Mode Changed");
     break;
   case ARDUINO_EVENT_WIFI_STA_GOT_IP:
-    logger.log(STOMPCS, INFO, "WiFi Got IP: %s", WiFi.localIP().toString().c_str());
+    logger.log(MAIKO, INFO, "WiFi Got IP: %s", WiFi.localIP().toString().c_str());
     break;
   case ARDUINO_EVENT_WIFI_STA_LOST_IP:
-    logger.log(STOMPCS, INFO, "WiFi Lost IP");
+    logger.log(MAIKO, INFO, "WiFi Lost IP");
     break;
   case ARDUINO_EVENT_WIFI_AP_START:
-    logger.log(STOMPCS, INFO, "WiFi AP Started");
+    logger.log(MAIKO, INFO, "WiFi AP Started");
     break;
   case ARDUINO_EVENT_WIFI_AP_STOP:
-    logger.log(STOMPCS, INFO, "WiFi AP Stopped");
+    logger.log(MAIKO, INFO, "WiFi AP Stopped");
     break;
   case ARDUINO_EVENT_WIFI_AP_STACONNECTED:
-    logger.log(STOMPCS, INFO, "Station Connected to WiFi AP");
+    logger.log(MAIKO, INFO, "Station Connected to WiFi AP");
     configData.connectedToAP = true;
     break;
   case ARDUINO_EVENT_WIFI_AP_STADISCONNECTED:
-    logger.log(STOMPCS, INFO, "Station Disconnected from WiFi AP");
+    logger.log(MAIKO, INFO, "Station Disconnected from WiFi AP");
     configData.connectedToAP = false;
     break;
   case ARDUINO_EVENT_WIFI_AP_STAIPASSIGNED:
-    logger.log(STOMPCS, INFO, "Station IP Assigned in WiFi AP Mode");
+    logger.log(MAIKO, INFO, "Station IP Assigned in WiFi AP Mode");
     break;
   case ARDUINO_EVENT_WIFI_AP_PROBEREQRECVED:
-    logger.log(STOMPCS, INFO, "Probe Request Received in WiFi AP Mode");
+    logger.log(MAIKO, INFO, "Probe Request Received in WiFi AP Mode");
     break;
   default:
     break;
@@ -168,12 +168,12 @@ String scanWifiNetworks()
   int numNetworks = WiFi.scanNetworks();
   if (numNetworks == WIFI_SCAN_FAILED)
   {
-    logger.log(STOMPCS, INFO, "Wi-Fi scan failed!");
+    logger.log(MAIKO, INFO, "Wi-Fi scan failed!");
     return "{}";
   }
   else if (numNetworks == 0)
   {
-    logger.log(STOMPCS, INFO, "No networks found");
+    logger.log(MAIKO, INFO, "No networks found");
     return "[]";
   }
 
@@ -191,8 +191,8 @@ String scanWifiNetworks()
 
   String jsonResult;
   serializeJson(jsonDoc, jsonResult);
-  logger.log(STOMPCS, INFO, "Scanned Wi-Fi Networks:");
-  logger.log(STOMPCS, INFO, "%s", jsonResult);
+  logger.log(MAIKO, INFO, "Scanned Wi-Fi Networks:");
+  logger.log(MAIKO, INFO, "%s", jsonResult);
 
   return jsonResult;
 }
@@ -229,11 +229,11 @@ void checkNetwork(void *parameter)
           WiFi.config(configData.Swifi_ip, configData.Swifi_gw, configData.Swifi_subnet, configData.Swifi_dns);
         }
         WiFi.begin(configData.ssid, configData.password);
-        logger.log(STOMPCS, INFO, "Connecting to %s", configData.ssid);
+        logger.log(MAIKO, INFO, "Connecting to %s", configData.ssid);
         return;
       }
 
-      logger.log(STOMPCS, INFO, "No Saved WiFi SSID, starting AP mode");
+      logger.log(MAIKO, INFO, "No Saved WiFi SSID, starting AP mode");
       if (WiFi.getMode() == WIFI_STA)
       {
         WiFi.mode(WIFI_AP);
@@ -262,7 +262,7 @@ void AutoSave(void *parameter)
       CONFIG_SAVED = true;
       configData.save("/config.json");
 
-      logger.log(STOMPCS, INFO, "[SYSTEM] AUTOSAVING");
+      logger.log(MAIKO, INFO, "[SYSTEM] AUTOSAVING");
     }
   }
 }
@@ -295,7 +295,7 @@ void serverInit()
   handler->setCacheControl("max-age=60");
 
   websocketHandler.onOpen([](PsychicWebSocketClient *client) { 
-    logger.log(STOMPCS, DEBUG, "[socket] connection #%u connected from %s\n", client->socket(), client->remoteIP().toString()); 
+    logger.log(MAIKO, DEBUG, "[socket] connection #%u connected from %s\n", client->socket(), client->remoteIP().toString()); 
     xTaskNotifyGive(syncClientsHandle);
   });
 
@@ -307,8 +307,8 @@ void serverInit()
       return ESP_FAIL;
     }
     else {
-      logger.log(STOMPCS, DEBUG, "Received JSON payload: %s", frame->payload);
-      JsonObject obj = doc["slider"];
+      logger.log(MAIKO, DEBUG, "Received JSON payload: %s", frame->payload);
+      JsonObject obj = doc["led"];
       if(!obj.isNull()) {
         int index = obj["index"];
         int warmCycle = obj["warmCycle"];
@@ -329,7 +329,7 @@ void serverInit()
 
   websocketHandler.onClose([](PsychicWebSocketClient *client)
                            {
-                             // logger.log(STOMPCS,DEBUG, "[socket] connection #%u closed from %s", client->socket(), client->remoteIP());
+                             // logger.log(MAIKO,DEBUG, "[socket] connection #%u closed from %s", client->socket(), client->remoteIP());
                            });
 
   // attach the handler to /ws.  You can then connect to ws://ip.address/ws
@@ -339,11 +339,11 @@ void serverInit()
       //EventSource server
       // curl -i -N http://psychic.local/events
       eventSource.onOpen([](PsychicEventSourceClient *client) {
-        logger.log(STOMPCS,INFO, "[eventsource] connection #%u connected from %s\n", client->socket(), client->remoteIP().toString());
+        logger.log(MAIKO,INFO, "[eventsource] connection #%u connected from %s\n", client->socket(), client->remoteIP().toString());
         client->send("Hello user!", NULL, millis(), 1000);
       });
       eventSource.onClose([](PsychicEventSourceClient *client) {
-        logger.log(STOMPCS,INFO, "[eventsource] connection #%u closed from %s\n", client->socket(), client->remoteIP().toString());
+        logger.log(MAIKO,INFO, "[eventsource] connection #%u closed from %s\n", client->socket(), client->remoteIP().toString());
       });
       server.on("/events", &eventSource);
 
@@ -351,13 +351,13 @@ void serverInit()
 
   server.onOpen([](PsychicClient *client)
                 {
-                  // logger.log(STOMPCS,DEBUG, "[client connection #%u connected from %s", client->socket(), client->remoteIP());
+                  // logger.log(MAIKO,DEBUG, "[client connection #%u connected from %s", client->socket(), client->remoteIP());
                   // syncClients();
                 });
 
   server.onClose([](PsychicClient *client)
                  {
-                   // logger.log(STOMPCS,DEBUG, "[client] connection #%u closed from %s", client->socket(), client->remoteIP());
+                   // logger.log(MAIKO,DEBUG, "[client] connection #%u closed from %s", client->socket(), client->remoteIP());
                  });
 
   server.on("/credWifi", HTTP_POST, [](PsychicRequest *request, JsonVariant &json)
@@ -410,7 +410,7 @@ void setup()
 
 #ifdef ST_DEBUG
   Serial.begin(115200);
-  logger.registerSerial(STOMPCS, DEBUG, "MAIKO"); // We want messages with DEBUG level and lower    delay(1000);
+  logger.registerSerial(MAIKO, DEBUG, "MAIKO"); // We want messages with DEBUG level and lower    delay(1000);
 #endif
 
 #ifdef WROVER
@@ -419,7 +419,7 @@ void setup()
 
 
   if (!storageManager.mountLittleFS()) {
-    logger.log(STOMPCS, ERROR, "File System Mount Failed");
+    logger.log(MAIKO, ERROR, "File System Mount Failed");
     return;
   } else {
     configData.load("/config.json");
@@ -452,7 +452,6 @@ void setup()
     ledcAttachPin(led->coldPin, led->warmChannel);
   }
 
-configData.save("/config.json");
 
   WiFi.onEvent(WiFiEvent);
 
@@ -464,11 +463,11 @@ configData.save("/config.json");
   if (MDNS.begin(configData.devicename))
   {
     MDNS.addService("http", "tcp", 80);
-    logger.log(STOMPCS, DEBUG, "MDNS: started");
+    logger.log(MAIKO, DEBUG, "MDNS: started");
   }
   else
   {
-    logger.log(STOMPCS, ERROR, "MDNS: failed to start");
+    logger.log(MAIKO, ERROR, "MDNS: failed to start");
   }
 
   serverInit();

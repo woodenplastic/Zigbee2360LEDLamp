@@ -120,21 +120,6 @@ transform:scale(1,2); /* W3C */
   background: white;
 }
 
-.aura-slider input::-webkit-slider-thumb {
-  background: black;
-  box-shadow: 0 0 5px rgba(255, 255, 255, 0.5);
-}
-
-.aura-slider1 input::-webkit-slider-thumb {
-  background: black;
-  box-shadow: 0 0 5px rgba(255, 255, 255, 0.5);
-}
-
-.aura-slider2 input::-webkit-slider-thumb {
-  background: black;
-  box-shadow: 0 0 5px rgba(255, 255, 255, 0.5);
-}
-
 .slider1 {
 border-radius: 1px;
 height: 2px;
@@ -147,18 +132,6 @@ height: 2px;
   background: linear-gradient(to right, rgb(255, 200, 0), white);
 }
 
-.aura-slider1 {
-border-radius: 1px;
-height: 2px;
-  background: linear-gradient(to right, rgb(0, 0, 0), white);
-}
-
-.aura-slider2 {
-border-radius: 1px;
-height: 2px;
-  background: linear-gradient(to right, rgb(255, 200, 0), white);
-  box-shadow: 0 0 5px rgba(255, 255, 255, 0.5);
-}
 
 .state {
   font-size: 1.2rem;

@@ -1,4 +1,5 @@
 let wsJson;
+let led_instances = [];
 
 class WebSocketJson {
     constructor(url, maxRetries = 10) {
@@ -16,9 +17,6 @@ class WebSocketJson {
       this.ws.onopen = () => {
         console.log("WebSocket connection established");
         this.reconnectAttempts = 0; // Reset attempts on successful connection
-        dataReadyTimeout = setTimeout(function () {
-          document.dispatchEvent(new Event('dataLoaded'));
-        }, 1); // Delay of 1000 milliseconds (1 second)
   
       };
   
@@ -28,13 +26,16 @@ class WebSocketJson {
           const data = JSON.parse(event.data);
 
           if (data.hasOwnProperty("leds") && Array.isArray(data.leds)) {
-            data.leds.forEach(led => {
-                // Create an instance if it doesn't exist
-                if (!led_instances[led.id]) {
-                  led_instances[led.id] = new LED(led.id);
-                }
-            });
-        }
+                data.leds.forEach(led => {
+                    // Create an instance if it doesn't exist
+                    if (!led_instances[led.index]) {
+                    led_instances[led.index] = new LED(led.index);
+                    }
+
+                    led_instances[led.index].set(led);
+                });
+                
+            }
   
         } catch (e) {
           console.error("Error processing the message:", e);
@@ -71,10 +72,6 @@ class WebSocketJson {
         `Attempting to reconnect in ${reconnectInterval / 1000} seconds`
       );
   
-      setTimeout(() => {
-        console.log("Reconnecting...");
-        this.connect();
-      }, reconnectInterval);
     }
   
     send(message) {
@@ -94,8 +91,9 @@ class WebSocketJson {
 
 
   class LED {
-    constructor(index) {
+    constructor(index, position) {
       this.index = index;
+      this.position = position
       this.positionContainer = document.getElementById("sliderContainers");
       this.createElements();
       this.addEventListeners();
@@ -107,11 +105,12 @@ class WebSocketJson {
       
       this.sliderlabel = document.createElement('div');
       this.sliderlabel.className = 'slider-label';
+      //this.sliderlabel.innerHTML = `${this.position}`;
       this.sliderlabel.innerHTML = "FRONT";
 
       this.slidercontainer1 = document.createElement('div');
       this.slidercontainer1.className = 'slider slider1';
-   
+
       this.slider1 = document.createElement('input');
       this.slider1.type = 'range';
       this.slider1.className = 'slider';
@@ -127,9 +126,12 @@ class WebSocketJson {
       this.slider1text.innerHTML = `Brightness: <span id="sliderValue_${this.index}"></span> &percnt`;
 
 
+      this.slidercontainer2 = document.createElement('div');
+      this.slidercontainer2.className = 'slider slider2';
+
       this.slider2 = document.createElement('input');
       this.slider2.type = 'range';
-      //this.slider2.className = 'slider';
+      this.slider2.className = 'slider';
       this.slider2.id = `slider2_${this.index}`;
       this.slider2.min = 0;
       this.slider2.max = 1024;
@@ -141,11 +143,17 @@ class WebSocketJson {
       this.slider2text.id = `slider2text_${this.index}`;
       this.slider2text.innerHTML = `Brightness: <span id="slider2Value_${this.index}"></span> &percnt`;
 
-      this.slidercontainer.appendChild(this.slider1);
-      this.slidercontainer.appendChild(this.slider1text);
-      this.slidercontainer.appendChild(this.slider2);
-      this.slidercontainer.appendChild(this.slider2text);
-  
+
+      this.slidercontainer.appendChild(this.sliderlabel);
+
+      this.slidercontainer.appendChild(this.slidercontainer1);
+      this.slidercontainer1.appendChild(this.slider1);
+      this.slidercontainer1.appendChild(this.slider1text);
+
+      this.slidercontainer.appendChild(this.slidercontainer2);
+      this.slidercontainer2.appendChild(this.slider2);
+      this.slidercontainer2.appendChild(this.slider2text);
+
       this.positionContainer.appendChild(this.slidercontainer);
     }
   
@@ -153,11 +161,18 @@ class WebSocketJson {
   
       this.slidercontainer.querySelectorAll('input').forEach(element => {
         element.addEventListener('change', () => {
-          const data = { id: this.id, [element.id]: element.value };
+          const data = { "led":{"index":this.index, "warmCycle": this.slider1.value, "coldCycle": this.slider2.value}  };
           wsJson.send(JSON.stringify(data));
+
         });
       });
 
+    }
+
+    set(data) {
+         this.slider1.value = data.warmCycle
+         this.slider2.value = data.coldCycle
+         this.sliderlabel.innerHTML = data.position
     }
   
   }
