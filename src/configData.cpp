@@ -15,8 +15,7 @@ int ConfigData::calculateState(bool in, bool out)
 void ConfigData::make(JsonDocument &doc) {
     serializeJsonPretty(doc, Serial);
 
-    useStaticEth = doc["useStaticEth"];
-    useStaticWiFi = doc["useStaticWiFi"];
+    useStaticWiFi = doc["useStaticWiFi"].as<bool>();
 
     strncpy(devicename, doc["devicename"], sizeof(devicename));
     strncpy(ssid, doc["ssid"], sizeof(ssid));

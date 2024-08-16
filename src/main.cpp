@@ -233,24 +233,28 @@ void checkNetwork(void *parameter)
         }
         WiFi.begin(configData.ssid, configData.password);
         logger.log(ALMALOOX, INFO, "Connecting to %s", configData.ssid);
-        return;
+        Serial.println("Connecting to saved WiFi SSID");
+        
+      } else {
+        logger.log(ALMALOOX, INFO, "No Saved WiFi SSID, starting AP mode");
+        if (WiFi.getMode() == WIFI_STA)
+        {
+          WiFi.mode(WIFI_AP);
+        }
+        if (configData.useStaticWiFi)
+        {
+          WiFi.softAPConfig(apIP, apIP, subnet);
+        }
+        WiFi.softAP(configData.devicename, softAP_password);
+        dnsServer.start(DNS_PORT, "*", apIP);
       }
 
-      logger.log(ALMALOOX, INFO, "No Saved WiFi SSID, starting AP mode");
-      if (WiFi.getMode() == WIFI_STA)
-      {
-        WiFi.mode(WIFI_AP);
-      }
-      if (configData.useStaticWiFi)
-      {
-        WiFi.softAPConfig(apIP, apIP, subnet);
-      }
-      WiFi.softAP(configData.devicename, softAP_password);
-      dnsServer.start(DNS_PORT, "*", apIP);
+
     }
 
     vTaskDelay(pdMS_TO_TICKS(1000));
   }
+  Serial.println("Ending checkNetwork task");
 }
 
 void AutoSave(void *parameter)
