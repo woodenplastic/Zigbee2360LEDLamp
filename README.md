@@ -1,2 +1,3 @@
-First commit to port Maikos first try to ESP32. 
-Main branch might not compile until dev branch opend. Im slow sometimes...
+SSID: MAIKO
+PASSWORD: 12345678
+PWM PINS: 25,26,27,14

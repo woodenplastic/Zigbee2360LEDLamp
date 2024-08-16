@@ -311,12 +311,12 @@ void serverInit()
     }
     else {
       logger.log(MAIKO, DEBUG, "Received JSON payload: %s", frame->payload);
-      JsonObject obj = doc["led"];
+      JsonObject obj = doc["leds"];
       if(!obj.isNull()) {
         int index = obj["index"];
         int warmCycle = obj["warmCycle"];
         int coldCycle = obj["coldCycle"];
-        ledData* led = configData.getLedData(0);
+        ledData* led = configData.getLedData(index);
         led->warmCycle = warmCycle;
         led->coldCycle = coldCycle;
         lastInputTime = millis();
@@ -428,23 +428,6 @@ void setup()
     configData.load("/config.json");
 
   }
-
-
-
-  strncpy(configData.devicename, "MAIKO", sizeof(configData.devicename));
-
-    ledData* led1 = configData.getLedData(0);
-    ledData* led2 = configData.getLedData(1);
-
-    led1->warmChannel = 0;
-    led1->coldChannel = 1;
-    led1->warmPin = 25;
-    led1->coldPin = 26;
-
-    led2->warmChannel = 2;
-    led2->coldChannel = 3;
-    led2->warmPin = 27;
-    led2->coldPin = 14;   
 
 
   for(size_t i; i < LEDCOUNT; i++) {

@@ -1,5 +1,6 @@
 let wsJson;
 let led_instances = [];
+let networkModal
 
 class WebSocketJson {
     constructor(url, maxRetries = 10) {
@@ -161,7 +162,7 @@ class WebSocketJson {
   
       this.slidercontainer.querySelectorAll('input').forEach(element => {
         element.addEventListener('change', () => {
-          const data = { "led":{"index":this.index, "warmCycle": this.slider1.value, "coldCycle": this.slider2.value}  };
+          const data = { "leds":{"index":this.index, "warmCycle": this.slider1.value, "coldCycle": this.slider2.value}  };
           wsJson.send(JSON.stringify(data));
 
         });
@@ -185,7 +186,303 @@ class WebSocketJson {
 
 
 
+  class WiFiScanner {
+    constructor(
+      scanButtonId,
+      spinnerId,
+      wifiListId,
+      ssidInputId,
+      passwordInputId
+    ) {
+      this.scanButton = document.getElementById(scanButtonId);
+      this.spinner = document.getElementById(spinnerId);
+      this.wifiList = document.getElementById(wifiListId);
+      this.ssidInput = document.getElementById(ssidInputId);
+      this.passwordInput = document.getElementById(passwordInputId);
+    }
+  
+    // Start the WiFi scan process
+    async startScan() {
+      this.toggleButtonSpinner(true);
+      await this.performWifiScan();
+      this.toggleButtonSpinner(false);
+    }
+  
+    async performWifiScan() {
+      try {
+        const response = await fetch("/doScanWiFi");
+        if (!response.ok) {
+          this.handleError("Error");
+          throw new Error("Network response was not ok");
+        }
+        const data = await response.json();
+        this.updateWifiList(data);
+      } catch (error) {
+        this.handleError("Error");
+        console.error("Error:", error);
+      } finally {
+        this.toggleButtonSpinner(false);
+      }
+    }
+  
+    handleError(errorMessage) {
+      if (this.scanButton) {
+        this.scanButton.innerHTML = errorMessage;
+        this.scanButton.style.background = "red";
+        this.scanButton.style.color = "white";
+  
+        setTimeout(() => {
+          if (this.scanButton) {
+            this.scanButton.innerHTML = "Scan WiFi";
+            this.scanButton.style.background = "";
+            this.scanButton.style.color = "";
+          }
+        }, 5000);
+      }
+    }
+  
+    // Toggle the visibility of the button and spinner
+    toggleButtonSpinner(show) {
+      if (this.scanButton) {
+        this.scanButton.innerHTML = show ? "" : "Scan WiFi";
+      }
+      if (this.spinner) {
+        this.spinner.style.display = show ? "inline-block" : "none";
+      }
+    }
+  
+    // Update the WiFi list in the UI
+    updateWifiList(networks) {
+      this.wifiList.innerHTML = ""; // Clear existing list
+  
+      const list = document.createElement("ul");
+      list.style.listStyle = "none";
+      list.style.padding = "0";
+  
+      networks.forEach((network) => {
+        const listItem = document.createElement("li");
+  
+        // Apply styles based on the current theme
+        this.applyThemeStyles(listItem);
+  
+        listItem.style.margin = "5px 0";
+        listItem.style.padding = "10px";
+        listItem.style.cursor = "pointer";
+  
+        listItem.onclick = () => {
+          this.ssidInput.value = network.ssid;
+          this.passwordInput.focus();
+        };
+  
+        const ssidElement = document.createElement("div");
+        ssidElement.textContent = `SSID: ${network.ssid}`;
+        listItem.appendChild(ssidElement);
+  
+        const signalElement = document.createElement("div");
+        signalElement.textContent = `Signal: ${this.getSignalStrength(
+          network.rssi
+        )}`;
+        listItem.appendChild(signalElement);
+  
+        const encryptionElement = document.createElement("div");
+        encryptionElement.textContent = `Encryption: ${this.getEncryptionType(
+          network.encryption
+        )}`;
+        listItem.appendChild(encryptionElement);
+  
+        list.appendChild(listItem);
+      });
+  
+      this.wifiList.appendChild(list);
+    }
+  
+    // Apply theme-specific styles to the list item
+    applyThemeStyles(listItem) {
+      if (document.body.classList.contains("dark-mode")) {
+        // Styles for dark mode
+        listItem.style.border = "1px solid #3498db"; // Blue border
+        listItem.style.backgroundColor = "#000"; // Dark background
+        listItem.style.color = "#fff"; // White text
+      } else {
+        // Styles for light mode
+        listItem.style.border = "1px solid #ccc"; // Light grey border
+        listItem.style.backgroundColor = "#f9f9f9"; // Light background
+        listItem.style.color = "#333"; // Dark text
+      }
+    }
+  
+    // Get encryption type description
+    getEncryptionType(encryptionType) {
+      switch (encryptionType) {
+        case 0:
+          return "Open";
+        case 1:
+          return "WEP";
+        case 2:
+          return "WPA PSK";
+        case 3:
+          return "WPA2 PSK";
+        case 4:
+          return "WPA/WPA2 PSK";
+        case 5:
+          return "WPA2 Enterprise";
+        case 6:
+          return "Max";
+        default:
+          return "Unknown";
+      }
+    }
+  
+    // Get signal strength description
+    getSignalStrength(rssi) {
+      if (rssi >= -50) return "Excellent";
+  
+      if (rssi >= -60) return "Very Good";
+  
+      if (rssi >= -70) return "Good";
+  
+      if (rssi >= -80) return "Moderate";
+  
+      return "Weak";
+    }
+  }
+  
 
+
+  class ModalBase {
+    constructor(modalId, index) {
+      this.modal = document.getElementById(modalId);
+      this.openBtn = document.getElementById(modalId.replace("_modal", "_bmodal"));
+      this.background = document.getElementById("modal-background");
+      this.closeBtn = this.modal.querySelector(".modal-close");
+      this.plusButton = this.modal.querySelector(".plusButton");
+      this.content = this.modal.querySelector(".modal-content");
+      this.index = index;
+      this.componentCounter = [];
+  
+      this.init();
+    }
+  
+    init() {
+      if (this.closeBtn) {
+        this.closeBtn.addEventListener("click", () => this.closeModal());
+      }
+  
+  
+      if (this.openBtn) {
+        this.openBtn.addEventListener("click", () => this.openModal());
+      }
+  
+      if (this.background) {
+        this.background.addEventListener("click", () => this.closeModal());
+      }
+    }
+  
+    openModal() {
+      if (this.modal && this.background) {
+        this.modal.style.display = "block";
+        this.background.style.display = "block";
+        document.body.style.overflow = "hidden";
+      }
+    }
+  
+    closeModal() {
+      if (this.modal && this.background) {
+        this.modal.style.display = "none";
+        this.background.style.display = "none";
+        document.body.style.overflow = "auto";
+      }
+    }
+  
+  }
+
+
+
+
+  
+async function handleSaveWifi() {
+    const button = document.getElementById("saveWifiButton");
+    const spinner = document.getElementById("saveWifiSpinner");
+  
+    toggleButtonSpinner(button, spinner, true);
+  
+    const formData = {
+      ssid: document.getElementById("ssid").value,
+      password: document.getElementById("password").value,
+    };
+  
+    await handleButtonClick(button, "/credWifi", formData, spinner);
+  }
+  
+  async function handleSaveWifiStatic() {
+    const button = document.getElementById("saveSWifiButton");
+    const spinner = document.getElementById("saveSWifiSpinner");
+  
+    toggleButtonSpinner(button, spinner, true);
+  
+    const formData = {
+      useStaticWiFi: document.getElementById("useStaticWiFi").checked,
+      Swifi_ip: document.getElementById("Swifi_ip").value,
+      Swifi_subnet: document.getElementById("Swifi_subnet").value,
+      Swifi_gw: document.getElementById("Swifi_gw").value,
+      Swifi_dns: document.getElementById("Swifi_dns").value,
+    };
+  
+    await handleButtonClick(button, "/credSWifi", formData, spinner);
+  }
+  
+  async function handleButtonClick(buttonElement, endpoint, formData, spinner) {
+    console.log("Button clicked. Starting request...");
+    try {
+      console.log("Sending request to:", endpoint);
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData),
+      });
+  
+      console.log("Response received:", response);
+      if (!response.ok) {
+        throw new Error("Network response was not ok");
+      }
+  
+      if (endpoint === "/credWifi" || endpoint === "/credSWifi") {
+        alert(
+          "Connect to selected WiFi and connect again with " +
+          document.getElementById("devicename").value +
+          ".local"
+        );
+        const redirectUrl =
+          "http://" + document.getElementById("devicename").value + ".local";
+        console.log("Redirecting to:", redirectUrl);
+        window.location.href = redirectUrl;
+      } else {
+        console.log("Handling other responses...");
+        // Handle other responses as needed
+      }
+    } catch (error) {
+      console.error("Error:", error);
+    } finally {
+      console.log("Entering finally block");
+      toggleButtonSpinner(buttonElement, spinner, false);
+    }
+  }
+  
+  function toggleButtonSpinner(button, spinner, show) {
+    if (button) {
+      button.style.display = show ? "none" : "inline-block";
+    }
+    if (spinner) {
+      spinner.style.display = show ? "inline-block" : "none";
+    }
+  }
+  
+  function handlePasswordVisibilityToggle() {
+    const password = document.getElementById("password");
+    password.type = this.checked ? "text" : "password";
+  }
 
 
 
@@ -195,5 +492,18 @@ class WebSocketJson {
   document.addEventListener('DOMContentLoaded', function () {
 
     wsJson = new WebSocketJson("ws://" + window.location.hostname + "/ws");
-  });
+
+    wifiScanner = new WiFiScanner(
+        "scanWiFi",
+        "scanWiFiSpinner",
+        "wifi-list",
+        "ssid",
+        "password"
+      );
+
+      document.getElementById("toggle-password").addEventListener("change", handlePasswordVisibilityToggle);
+
+      networkModal = new ModalBase("wifi_modal");
+      
+    });
 

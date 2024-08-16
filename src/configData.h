@@ -12,6 +12,7 @@ struct ledData {
     uint32_t coldCycle = 1024;
     uint8_t coldChannel = 0;
     uint8_t warmChannel = 0;
+    String position = "FRONT";
 };
 
 // Define the ConfigData class

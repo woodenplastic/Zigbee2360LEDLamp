@@ -1,0 +1,36 @@
+{
+    "devicename": "MAIKO",
+    "ssid": "",
+    "password": "",
+    "wifi_ip": "0.0.0.0",
+    "wifi_subnet": "0.0.0.0",
+    "wifi_gw": "0.0.0.0",
+    "wifi_dns": "0.0.0.0",
+    "useStaticWiFi": false,
+    "Swifi_ip": "0.0.0.0",
+    "Swifi_sub": "0.0.0.0",
+    "Swifi_gw": "0.0.0.0",
+    "Swifi_dns": "0.0.0.0",
+    "leds": [
+      {
+        "index": 0,
+        "warmPin": 25,
+        "coldPin": 26,
+        "warmChannel": 0,
+        "coldChannel": 0,
+        "warmCycle": 1024,
+        "coldCycle": 1024,
+        "position": "FRONT"
+      },
+      {
+        "index": 1,
+        "warmPin": 27,
+        "coldPin": 14,
+        "warmChannel": 0,
+        "coldChannel": 0,
+        "warmCycle": 1024,
+        "coldCycle": 1024,
+        "position": "AURA"
+      }
+    ]
+  }

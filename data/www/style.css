@@ -137,3 +137,57 @@ height: 2px;
   font-size: 1.2rem;
   color:#28454e00;
 }
+
+
+.modal {
+  display: none;
+  position: fixed;
+  z-index: 10;
+  top: 1em;
+  max-height: calc(100vh - 80px);
+  min-height: 25%;
+  width: inherit;
+  overflow-y: auto;
+  background-color: #000000;
+  padding: 20px;
+  padding-top: 0;
+  border: 1px solid #888;
+}
+
+.modal-close:hover,
+.modal-close:focus {
+  color: rgb(255, 255, 255);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.modal-close {
+  position: absolute;
+  right: 0.5em;
+  color: #aaa;
+  font-size: 3em;
+  font-weight: bold;
+}
+
+
+
+
+.modal-background {
+  background: rgba(0, 0, 0, 0.5);
+  position: fixed;
+  z-index: 2;
+  bottom: 0;
+  right: 0;
+  left: 0;
+  top: 0;
+  display: none;
+}
+
+
+.nav-button {
+  width:fit-content;
+  background:none;
+  font-size:2em;
+  border:0;
+}
+

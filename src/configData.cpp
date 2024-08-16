@@ -42,6 +42,8 @@ void ConfigData::make(JsonDocument &doc) {
         led->coldChannel = leds["coldChannel"].as<uint8_t>();
         led->warmCycle = leds["warmCycle"].as<uint32_t>();
         led->coldCycle = leds["coldCycle"].as<uint32_t>();
+        led->position = leds["position"].as<String>();
+
 
     }
 
@@ -78,6 +80,7 @@ JsonDocument ConfigData::get() {
             obj["coldChannel"] = led->coldChannel;
             obj["warmCycle"] = led->warmCycle;
             obj["coldCycle"] = led->coldCycle;
+            obj["position"] = led->position;
         }
     }
 
