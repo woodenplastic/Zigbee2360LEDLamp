@@ -1,5 +1,5 @@
 {
-    "devicename": "MAIKO",
+    "devicename": "ALMALOOX",
     "ssid": "",
     "password": "",
     "wifi_ip": "0.0.0.0",
@@ -17,19 +17,19 @@
         "warmPin": 25,
         "coldPin": 26,
         "warmChannel": 0,
-        "coldChannel": 0,
-        "warmCycle": 1024,
-        "coldCycle": 1024,
+        "coldChannel": 1,
+        "warmCycle": 0,
+        "coldCycle": 0,
         "position": "FRONT"
       },
       {
         "index": 1,
         "warmPin": 27,
         "coldPin": 14,
-        "warmChannel": 0,
-        "coldChannel": 0,
-        "warmCycle": 1024,
-        "coldCycle": 1024,
+        "warmChannel": 2,
+        "coldChannel": 3,
+        "warmCycle": 0,
+        "coldCycle": 0,
         "position": "AURA"
       }
     ]

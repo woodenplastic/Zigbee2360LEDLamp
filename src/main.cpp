@@ -48,7 +48,7 @@ DNSServer dnsServer;
 #define NET_TIMEOUT_MS 20000
 #define WIFI_RECOVER_TIME_MS 30000
 
-// HERE PASSWORD FOR AP // SSID = MAIKO
+// HERE PASSWORD FOR AP // SSID = ALMALOOX
 const char *softAP_password = "12345678";
 
 
@@ -61,7 +61,7 @@ bool CONFIG_SAVED = true;        // Initialize as true to prevent immediate savi
 const unsigned int localPort = 53000; // local port to listen for OSC packets (actually not used for sending)
 
 #include <ELog.h>
-#define MAIKO 0
+#define ALMALOOX 0
 
 SemaphoreHandle_t sema_Server = NULL;
 
@@ -114,51 +114,51 @@ void WiFiEvent(WiFiEvent_t event)
   switch (event)
   {
   case ARDUINO_EVENT_WIFI_READY:
-    logger.log(MAIKO, INFO, "WiFi Ready");
+    logger.log(ALMALOOX, INFO, "WiFi Ready");
     break;
   case ARDUINO_EVENT_WIFI_SCAN_DONE:
-    logger.log(MAIKO, INFO, "WiFi Scan Done");
+    logger.log(ALMALOOX, INFO, "WiFi Scan Done");
     break;
   case ARDUINO_EVENT_WIFI_STA_START:
-    logger.log(MAIKO, INFO, "WiFi STA Started");
+    logger.log(ALMALOOX, INFO, "WiFi STA Started");
     break;
   case ARDUINO_EVENT_WIFI_STA_STOP:
-    logger.log(MAIKO, INFO, "WiFi STA Stopped");
+    logger.log(ALMALOOX, INFO, "WiFi STA Stopped");
     break;
   case ARDUINO_EVENT_WIFI_STA_CONNECTED:
-    logger.log(MAIKO, INFO, "WiFi Connected");
+    logger.log(ALMALOOX, INFO, "WiFi Connected");
     break;
   case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
-    logger.log(MAIKO, INFO, "WiFi Disconnected");
+    logger.log(ALMALOOX, INFO, "WiFi Disconnected");
     break;
   case ARDUINO_EVENT_WIFI_STA_AUTHMODE_CHANGE:
-    logger.log(MAIKO, INFO, "WiFi Auth Mode Changed");
+    logger.log(ALMALOOX, INFO, "WiFi Auth Mode Changed");
     break;
   case ARDUINO_EVENT_WIFI_STA_GOT_IP:
-    logger.log(MAIKO, INFO, "WiFi Got IP: %s", WiFi.localIP().toString().c_str());
+    logger.log(ALMALOOX, INFO, "WiFi Got IP: %s", WiFi.localIP().toString().c_str());
     break;
   case ARDUINO_EVENT_WIFI_STA_LOST_IP:
-    logger.log(MAIKO, INFO, "WiFi Lost IP");
+    logger.log(ALMALOOX, INFO, "WiFi Lost IP");
     break;
   case ARDUINO_EVENT_WIFI_AP_START:
-    logger.log(MAIKO, INFO, "WiFi AP Started");
+    logger.log(ALMALOOX, INFO, "WiFi AP Started");
     break;
   case ARDUINO_EVENT_WIFI_AP_STOP:
-    logger.log(MAIKO, INFO, "WiFi AP Stopped");
+    logger.log(ALMALOOX, INFO, "WiFi AP Stopped");
     break;
   case ARDUINO_EVENT_WIFI_AP_STACONNECTED:
-    logger.log(MAIKO, INFO, "Station Connected to WiFi AP");
+    logger.log(ALMALOOX, INFO, "Station Connected to WiFi AP");
     configData.connectedToAP = true;
     break;
   case ARDUINO_EVENT_WIFI_AP_STADISCONNECTED:
-    logger.log(MAIKO, INFO, "Station Disconnected from WiFi AP");
+    logger.log(ALMALOOX, INFO, "Station Disconnected from WiFi AP");
     configData.connectedToAP = false;
     break;
   case ARDUINO_EVENT_WIFI_AP_STAIPASSIGNED:
-    logger.log(MAIKO, INFO, "Station IP Assigned in WiFi AP Mode");
+    logger.log(ALMALOOX, INFO, "Station IP Assigned in WiFi AP Mode");
     break;
   case ARDUINO_EVENT_WIFI_AP_PROBEREQRECVED:
-    logger.log(MAIKO, INFO, "Probe Request Received in WiFi AP Mode");
+    logger.log(ALMALOOX, INFO, "Probe Request Received in WiFi AP Mode");
     break;
   default:
     break;
@@ -171,12 +171,12 @@ String scanWifiNetworks()
   int numNetworks = WiFi.scanNetworks();
   if (numNetworks == WIFI_SCAN_FAILED)
   {
-    logger.log(MAIKO, INFO, "Wi-Fi scan failed!");
+    logger.log(ALMALOOX, INFO, "Wi-Fi scan failed!");
     return "{}";
   }
   else if (numNetworks == 0)
   {
-    logger.log(MAIKO, INFO, "No networks found");
+    logger.log(ALMALOOX, INFO, "No networks found");
     return "[]";
   }
 
@@ -194,8 +194,8 @@ String scanWifiNetworks()
 
   String jsonResult;
   serializeJson(jsonDoc, jsonResult);
-  logger.log(MAIKO, INFO, "Scanned Wi-Fi Networks:");
-  logger.log(MAIKO, INFO, "%s", jsonResult);
+  logger.log(ALMALOOX, INFO, "Scanned Wi-Fi Networks:");
+  logger.log(ALMALOOX, INFO, "%s", jsonResult);
 
   return jsonResult;
 }
@@ -210,7 +210,7 @@ void checkNetwork(void *parameter)
         MANUAL_TRIGGER_BIT,
         pdTRUE,               // Clear the bit on exit
         pdFALSE,              // Wait for any bit
-        pdMS_TO_TICKS(120000) // 60-second delay
+        pdMS_TO_TICKS(120000) // 120-second delay
     );
     if ((WiFi.softAPgetStationNum() == 0) && !WiFi.isConnected())
     {
@@ -232,11 +232,11 @@ void checkNetwork(void *parameter)
           WiFi.config(configData.Swifi_ip, configData.Swifi_gw, configData.Swifi_subnet, configData.Swifi_dns);
         }
         WiFi.begin(configData.ssid, configData.password);
-        logger.log(MAIKO, INFO, "Connecting to %s", configData.ssid);
+        logger.log(ALMALOOX, INFO, "Connecting to %s", configData.ssid);
         return;
       }
 
-      logger.log(MAIKO, INFO, "No Saved WiFi SSID, starting AP mode");
+      logger.log(ALMALOOX, INFO, "No Saved WiFi SSID, starting AP mode");
       if (WiFi.getMode() == WIFI_STA)
       {
         WiFi.mode(WIFI_AP);
@@ -245,7 +245,7 @@ void checkNetwork(void *parameter)
       {
         WiFi.softAPConfig(apIP, apIP, IPAddress(255, 255, 255, 0));
       }
-      WiFi.softAP(/*configData.devicename*/ "MAIKO", softAP_password);
+      WiFi.softAP(/*configData.devicename*/ "ALMALOOX", softAP_password);
       dnsServer.start(DNS_PORT, "*", apIP);
     }
 
@@ -265,7 +265,7 @@ void AutoSave(void *parameter)
       CONFIG_SAVED = true;
       configData.save("/config.json");
 
-      logger.log(MAIKO, INFO, "[SYSTEM] AUTOSAVING");
+      logger.log(ALMALOOX, INFO, "[SYSTEM] AUTOSAVING");
     }
   }
 }
@@ -298,7 +298,7 @@ void serverInit()
   handler->setCacheControl("max-age=60");
 
   websocketHandler.onOpen([](PsychicWebSocketClient *client) { 
-    logger.log(MAIKO, DEBUG, "[socket] connection #%u connected from %s\n", client->socket(), client->remoteIP().toString()); 
+    logger.log(ALMALOOX, DEBUG, "[socket] connection #%u connected from %s\n", client->socket(), client->remoteIP().toString()); 
     xTaskNotifyGive(syncClientsHandle);
   });
 
@@ -310,7 +310,7 @@ void serverInit()
       return ESP_FAIL;
     }
     else {
-      logger.log(MAIKO, DEBUG, "Received JSON payload: %s", frame->payload);
+      logger.log(ALMALOOX, DEBUG, "Received JSON payload: %s", frame->payload);
       JsonObject obj = doc["leds"];
       if(!obj.isNull()) {
         int index = obj["index"];
@@ -332,7 +332,7 @@ void serverInit()
 
   websocketHandler.onClose([](PsychicWebSocketClient *client)
                            {
-                             // logger.log(MAIKO,DEBUG, "[socket] connection #%u closed from %s", client->socket(), client->remoteIP());
+                             // logger.log(ALMALOOX,DEBUG, "[socket] connection #%u closed from %s", client->socket(), client->remoteIP());
                            });
 
   // attach the handler to /ws.  You can then connect to ws://ip.address/ws
@@ -342,11 +342,11 @@ void serverInit()
       //EventSource server
       // curl -i -N http://psychic.local/events
       eventSource.onOpen([](PsychicEventSourceClient *client) {
-        logger.log(MAIKO,INFO, "[eventsource] connection #%u connected from %s\n", client->socket(), client->remoteIP().toString());
+        logger.log(ALMALOOX,INFO, "[eventsource] connection #%u connected from %s\n", client->socket(), client->remoteIP().toString());
         client->send("Hello user!", NULL, millis(), 1000);
       });
       eventSource.onClose([](PsychicEventSourceClient *client) {
-        logger.log(MAIKO,INFO, "[eventsource] connection #%u closed from %s\n", client->socket(), client->remoteIP().toString());
+        logger.log(ALMALOOX,INFO, "[eventsource] connection #%u closed from %s\n", client->socket(), client->remoteIP().toString());
       });
       server.on("/events", &eventSource);
 
@@ -354,14 +354,30 @@ void serverInit()
 
   server.onOpen([](PsychicClient *client)
                 {
-                  // logger.log(MAIKO,DEBUG, "[client connection #%u connected from %s", client->socket(), client->remoteIP());
+                  // logger.log(ALMALOOX,DEBUG, "[client connection #%u connected from %s", client->socket(), client->remoteIP());
                   // syncClients();
                 });
 
   server.onClose([](PsychicClient *client)
                  {
-                   // logger.log(MAIKO,DEBUG, "[client] connection #%u closed from %s", client->socket(), client->remoteIP());
+                   // logger.log(ALMALOOX,DEBUG, "[client] connection #%u closed from %s", client->socket(), client->remoteIP());
                  });
+
+  server.on("/redirect", HTTP_GET, [](PsychicRequest* request)
+    { return request->redirect("http://almaloox.local"); });
+
+  server.on("/connecttest.txt", HTTP_GET, [](PsychicRequest* request)
+    { return request->redirect("http://almaloox.local"); });
+
+  server.on("/hotspot-detect.html", HTTP_GET, [](PsychicRequest* request)
+    { return request->redirect("http://almaloox.local"); });
+
+  server.on("/generate_204", HTTP_GET, [](PsychicRequest* request) {
+    return request->redirect("http://almaloox.local"); });
+
+  server.on("/gen_204", HTTP_GET, [](PsychicRequest* request) { 
+    return request->redirect("http://almaloox.local"); });
+
 
   server.on("/credWifi", HTTP_POST, [](PsychicRequest *request, JsonVariant &json)
             {
@@ -411,9 +427,9 @@ void setup()
   SERVER_GROUP = xEventGroupCreate();
   networkEventGroup = xEventGroupCreate();
 
-#ifdef ST_DEBUG
+#ifdef ALMALOOX_DEBUG
   Serial.begin(115200);
-  logger.registerSerial(MAIKO, DEBUG, "MAIKO"); // We want messages with DEBUG level and lower    delay(1000);
+  logger.registerSerial(ALMALOOX, DEBUG, "ALMALOOX");
 #endif
 
 #ifdef WROVER
@@ -422,7 +438,7 @@ void setup()
 
 
   if (!storageManager.mountLittleFS()) {
-    logger.log(MAIKO, ERROR, "File System Mount Failed");
+    logger.log(ALMALOOX, ERROR, "File System Mount Failed");
     return;
   } else {
     configData.load("/config.json");
@@ -449,11 +465,11 @@ void setup()
   if (MDNS.begin(configData.devicename))
   {
     MDNS.addService("http", "tcp", 80);
-    logger.log(MAIKO, DEBUG, "MDNS: started");
+    logger.log(ALMALOOX, DEBUG, "MDNS: started");
   }
   else
   {
-    logger.log(MAIKO, ERROR, "MDNS: failed to start");
+    logger.log(ALMALOOX, ERROR, "MDNS: failed to start");
   }
 
   serverInit();

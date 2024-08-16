@@ -185,9 +185,12 @@ height: 2px;
 
 
 .nav-button {
+  
   width:fit-content;
   background:none;
-  font-size:2em;
+  font-size:1em;
   border:0;
+  right:0;
+  position: absolute;
 }
 
