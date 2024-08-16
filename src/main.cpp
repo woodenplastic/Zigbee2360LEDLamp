@@ -180,8 +180,8 @@ String scanWifiNetworks()
     return "[]";
   }
 
-  JsonDocument jsonDoc;
-  JsonArray networks = jsonDoc.to<JsonArray>();
+  JsonDocument doc;
+  JsonArray networks = doc.to<JsonArray>();
 
   for (size_t i = 0; i < numNetworks; ++i)
   {
@@ -193,7 +193,7 @@ String scanWifiNetworks()
   }
 
   String jsonResult;
-  serializeJson(jsonDoc, jsonResult);
+  serializeJson(doc, jsonResult);
   logger.log(ALMALOOX, INFO, "Scanned Wi-Fi Networks:");
   logger.log(ALMALOOX, INFO, "%s", jsonResult);
 
@@ -233,7 +233,6 @@ void checkNetwork(void *parameter)
         }
         WiFi.begin(configData.ssid, configData.password);
         logger.log(ALMALOOX, INFO, "Connecting to %s", configData.ssid);
-        Serial.println("Connecting to saved WiFi SSID");
         
       } else {
         logger.log(ALMALOOX, INFO, "No Saved WiFi SSID, starting AP mode");
@@ -249,12 +248,10 @@ void checkNetwork(void *parameter)
         dnsServer.start(DNS_PORT, "*", apIP);
       }
 
-
     }
 
     vTaskDelay(pdMS_TO_TICKS(1000));
   }
-  Serial.println("Ending checkNetwork task");
 }
 
 void AutoSave(void *parameter)
