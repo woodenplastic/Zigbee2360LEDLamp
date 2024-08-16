@@ -225,7 +225,7 @@ void checkNetwork(void *parameter)
         WiFi.mode(WIFI_STA);
       }
 
-      if ((strlen(configData.ssid) > 0) && isSSIDAvailable(configData.ssid))
+      if (isSSIDAvailable(configData.ssid))
       {
         if (configData.useStaticWiFi)
         {
@@ -243,9 +243,9 @@ void checkNetwork(void *parameter)
       }
       if (configData.useStaticWiFi)
       {
-        WiFi.softAPConfig(apIP, apIP, IPAddress(255, 255, 255, 0));
+        WiFi.softAPConfig(apIP, apIP, subnet);
       }
-      WiFi.softAP(/*configData.devicename*/ "ALMALOOX", softAP_password);
+      WiFi.softAP(configData.devicename, softAP_password);
       dnsServer.start(DNS_PORT, "*", apIP);
     }
 
@@ -381,6 +381,7 @@ void serverInit()
 
   server.on("/credWifi", HTTP_POST, [](PsychicRequest *request, JsonVariant &json)
             {
+              serializeJsonPretty(json, Serial);
               JsonObject doc = json.as<JsonObject>();
 
               strncpy(configData.ssid, doc["ssid"], sizeof(configData.ssid));

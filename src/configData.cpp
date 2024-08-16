@@ -13,6 +13,7 @@ int ConfigData::calculateState(bool in, bool out)
 }
 
 void ConfigData::make(JsonDocument &doc) {
+    serializeJsonPretty(doc, Serial);
 
     useStaticEth = doc["useStaticEth"];
     useStaticWiFi = doc["useStaticWiFi"];
@@ -83,6 +84,7 @@ JsonDocument ConfigData::get() {
         }
     }
 
+    serializeJsonPretty(doc, Serial);
     return doc;
 }
 

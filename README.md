@@ -6,4 +6,4 @@ WEBPAGE available at: almaloox.local or 192.168.4.1
 
 Flash state initiated through config.json
 
-REDIRECT does not go through connectiontest.txt, must check
+

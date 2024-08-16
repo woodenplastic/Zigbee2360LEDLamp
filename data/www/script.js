@@ -161,7 +161,7 @@ class WebSocketJson {
     addEventListeners() {
   
       this.slidercontainer.querySelectorAll('input').forEach(element => {
-        element.addEventListener('change', () => {
+        element.addEventListener('input', () => {
           const data = { "leds":{"index":this.index, "warmCycle": this.slider1.value, "coldCycle": this.slider2.value}  };
           wsJson.send(JSON.stringify(data));
 
@@ -450,12 +450,10 @@ async function handleSaveWifi() {
   
       if (endpoint === "/credWifi" || endpoint === "/credSWifi") {
         alert(
-          "Connect to selected WiFi and connect again with " +
-          document.getElementById("devicename").value +
-          ".local"
+          "Connect to selected WiFi and connect again with almaloox.local"
         );
         const redirectUrl =
-          "http://" + document.getElementById("devicename").value + ".local";
+          "http://almaloox.local.local";
         console.log("Redirecting to:", redirectUrl);
         window.location.href = redirectUrl;
       } else {
