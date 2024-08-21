@@ -1,4 +1,5 @@
 let wsJson;
+let wifiScanner;
 let led_instances = [];
 let networkModal
 
@@ -30,7 +31,7 @@ class WebSocketJson {
                 data.leds.forEach(led => {
                     // Create an instance if it doesn't exist
                     if (!led_instances[led.index]) {
-                    led_instances[led.index] = new LED(led.index);
+                    led_instances[led.index] = new LED(led);
                     }
 
                     led_instances[led.index].set(led);
@@ -92,15 +93,15 @@ class WebSocketJson {
 
 
   class LED {
-    constructor(index, position) {
-      this.index = index;
+    constructor(data, position) {
+      this.index = data.index;
       this.position = position
       this.positionContainer = document.getElementById("sliderContainers");
-      this.createElements();
+      this.createElements(data);
       this.addEventListeners();
     }
   
-    createElements() {
+    createElements(data) {
       this.slidercontainer = document.createElement('div');
       this.slidercontainer.className = 'slider-container';
       
@@ -116,10 +117,10 @@ class WebSocketJson {
       this.slider1.type = 'range';
       this.slider1.className = 'slider';
       this.slider1.id = `slider1_${this.index}`;
-      this.slider1.min = 0;
+      this.slider1.min = 100;
       this.slider1.max = 1024;
       this.slider1.step = 10;
-      this.slider1.value = 0;
+      this.slider1.value = data.warmCycle;
 
       this.slider1text = document.createElement('p');
       this.slider1text.className = 'state';
@@ -134,10 +135,10 @@ class WebSocketJson {
       this.slider2.type = 'range';
       this.slider2.className = 'slider';
       this.slider2.id = `slider2_${this.index}`;
-      this.slider2.min = 0;
+      this.slider2.min = 150;
       this.slider2.max = 1024;
       this.slider2.step = 10;
-      this.slider2.value = 0;
+      this.slider2.value = data.coldCycle;
 
       this.slider2text = document.createElement('p');
       this.slider2text.className = 'state';
@@ -489,7 +490,7 @@ async function handleSaveWifi() {
 
   document.addEventListener('DOMContentLoaded', function () {
 
-    wsJson = new WebSocketJson("ws://" + window.location.hostname + "/ws");
+    
 
     wifiScanner = new WiFiScanner(
         "scanWiFi",
@@ -503,5 +504,6 @@ async function handleSaveWifi() {
 
       networkModal = new ModalBase("wifi_modal");
       
+    wsJson = new WebSocketJson("ws://" + window.location.hostname + "/ws");
     });
 

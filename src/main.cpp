@@ -10,11 +10,6 @@
 #include "byteArray.h"
 
 
-
-
-
-
-
 #include <WiFi.h>
 #include <WiFiClient.h>
 #include <WiFiUdp.h>
@@ -76,8 +71,9 @@ const int MANUAL_TRIGGER_BIT = BIT0;
 const int SYNC_CLIENTS_BIT = BIT1;
 
 
-void setLedDutyCycle(size_t i) {
-    ledData* led = configData.getLedData(i);
+void setLedDutyCycle() {
+  for (int i; i < 2; i++) {
+    ledData* led = configData.getLedData(0);
     // Constrain the values to be within the PWM range (0-255)
     int pwm1 = constrain(led->warmCycle * 0.25, 0, 255);
     int pwm2 = constrain(led->coldCycle * 0.25, 0, 255);
@@ -85,6 +81,8 @@ void setLedDutyCycle(size_t i) {
     // Write the PWM values to the specified channels
     ledcWrite(led->warmChannel, pwm1);
     ledcWrite(led->coldChannel, pwm2);
+    
+  }
 }
 
 
@@ -473,7 +471,7 @@ void setup()
     ledcSetup(led->warmChannel, pwmFreq,pwmResolution);
     ledcSetup(led->coldChannel, pwmFreq,pwmResolution);
     ledcAttachPin(led->warmPin, led->warmChannel);
-    ledcAttachPin(led->coldPin, led->warmChannel);
+    ledcAttachPin(led->coldPin, led->coldChannel);
   }
 
 
@@ -502,12 +500,12 @@ void setup()
   xEventGroupSetBits(networkEventGroup, MANUAL_TRIGGER_BIT);
 }
 void loop() {
+  setLedDutyCycle();
   // DNS server processing for AP mode
   if (WiFi.getMode() == WIFI_AP || WiFi.getMode() == WIFI_AP_STA) {
     dnsServer.processNextRequest();
   }
 
-  for (size_t i; i < LEDCOUNT; i++) {
-    setLedDutyCycle(i);
-  }
+
+
 }
