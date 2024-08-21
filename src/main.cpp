@@ -410,7 +410,7 @@ void serverInit()
 
               request->reply("OK");
               WiFi.softAPdisconnect();
-              dnsServer.stop();
+              
               xEventGroupSetBits(networkEventGroup, MANUAL_TRIGGER_BIT);
               return ESP_OK;
             });
@@ -432,7 +432,7 @@ void serverInit()
 
       request->reply("OK");
       WiFi.softAPdisconnect();
-      dnsServer.stop();
+      
       xEventGroupSetBits(networkEventGroup, MANUAL_TRIGGER_BIT);
       return ESP_OK; });
 
