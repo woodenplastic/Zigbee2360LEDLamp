@@ -90,8 +90,11 @@ void setLedDutyCycle(size_t i) {
 
 // NETWORK ///////////////////////////////////////////////////////////////////////
 
-bool isSSIDAvailable(const char *ssidToFind)
-{
+bool isSSIDAvailable(const char* ssidToFind) {
+  if (ssidToFind == nullptr || *ssidToFind == '\0') {
+    return false;
+  }
+
   int scanAttempts = 0;
   while (scanAttempts < maxScanAttempts)
   {
@@ -100,14 +103,15 @@ bool isSSIDAvailable(const char *ssidToFind)
     {
       if (strcmp(WiFi.SSID(i).c_str(), ssidToFind) == 0)
       {
-        return true;
+        return true; // Found the saved SSID
       }
     }
     delay(scanInterval);
     scanAttempts++;
   }
-  return false;
+  return false; // Saved SSID not found after scanning
 }
+
 
 void WiFiEvent(WiFiEvent_t event)
 {
@@ -148,11 +152,9 @@ void WiFiEvent(WiFiEvent_t event)
     break;
   case ARDUINO_EVENT_WIFI_AP_STACONNECTED:
     logger.log(ALMALOOX, INFO, "Station Connected to WiFi AP");
-    configData.connectedToAP = true;
     break;
   case ARDUINO_EVENT_WIFI_AP_STADISCONNECTED:
     logger.log(ALMALOOX, INFO, "Station Disconnected from WiFi AP");
-    configData.connectedToAP = false;
     break;
   case ARDUINO_EVENT_WIFI_AP_STAIPASSIGNED:
     logger.log(ALMALOOX, INFO, "Station IP Assigned in WiFi AP Mode");
@@ -200,57 +202,73 @@ String scanWifiNetworks()
   return jsonResult;
 }
 
-void checkNetwork(void *parameter)
-{
-  for (;;)
-  {
+void checkNetwork(void* parameter) {
+  for (;;) {
     // Wait for either the periodic delay or the manual trigger event
     EventBits_t bits = xEventGroupWaitBits(
-        networkEventGroup,
-        MANUAL_TRIGGER_BIT,
-        pdTRUE,               // Clear the bit on exit
-        pdFALSE,              // Wait for any bit
-        pdMS_TO_TICKS(120000) // 120-second delay
+      networkEventGroup,
+      MANUAL_TRIGGER_BIT,
+      pdTRUE, // Clear the bit on exit
+      pdFALSE, // Wait for any bit
+      pdMS_TO_TICKS(30000) // 30-second delay
     );
-    if ((WiFi.softAPgetStationNum() == 0) && !WiFi.isConnected())
-    {
-      if (WiFi.getMode() == WIFI_STA)
-      {
+    
+    // Check if we need to connect to a Wi-Fi network
+    if ((WiFi.softAPgetStationNum() == 0) && !WiFi.isConnected()) {
+
+      // Handle WiFi mode switching
+      if (WiFi.getMode() == WIFI_STA) {
         WiFi.disconnect();
       }
-      if (WiFi.getMode() == WIFI_AP)
-      {
+      if (WiFi.getMode() == WIFI_AP) {
         WiFi.softAPdisconnect();
         dnsServer.stop();
         WiFi.mode(WIFI_STA);
       }
 
-      if (isSSIDAvailable(configData.ssid))
-      {
-        if (configData.useStaticWiFi)
-        {
+      // Try to connect to the SSID if it's available
+      if (isSSIDAvailable(configData.ssid)) {
+        if (configData.useStaticWiFi) {
           WiFi.config(configData.Swifi_ip, configData.Swifi_gw, configData.Swifi_subnet, configData.Swifi_dns);
         }
         WiFi.begin(configData.ssid, configData.password);
         logger.log(ALMALOOX, INFO, "Connecting to %s", configData.ssid);
         
+        // Wait for up to 10 seconds to see if the connection is successful
+        unsigned long startTime = millis();
+        bool connected = false;
+        while (millis() - startTime < 10000) { // 10 seconds timeout
+          if (WiFi.isConnected()) {
+            connected = true;
+            break;
+          }
+          vTaskDelay(pdMS_TO_TICKS(1000)); // Check every 500 milliseconds
+        }
+        
+        if (connected) {
+          // Successfully connected
+          logger.log(ALMALOOX, INFO, "Successfully connected to %s", configData.ssid);
+          continue; // Exit the loop and wait for the next event
+        } else {
+          // Failed to connect
+          logger.log(ALMALOOX, INFO, "Failed to connect to %s, switching to AP mode", configData.ssid);
+        }
       } else {
         logger.log(ALMALOOX, INFO, "No Saved WiFi SSID, starting AP mode");
-        if (WiFi.getMode() == WIFI_STA)
-        {
-          WiFi.mode(WIFI_AP);
-        }
-        if (configData.useStaticWiFi)
-        {
-          WiFi.softAPConfig(apIP, apIP, subnet);
-        }
-        WiFi.softAP(configData.devicename, softAP_password);
-        dnsServer.start(DNS_PORT, "*", apIP);
       }
 
+      // Switch to AP mode
+      if (WiFi.getMode() == WIFI_STA) {
+        WiFi.mode(WIFI_AP);
+      }
+      if (configData.useStaticWiFi) {
+        WiFi.softAPConfig(apIP, apIP, IPAddress(255, 255, 255, 0));
+      }
+      WiFi.softAP(configData.devicename, softAP_password);
+      dnsServer.start(DNS_PORT, "*", apIP);
     }
 
-    vTaskDelay(pdMS_TO_TICKS(1000));
+    vTaskDelay(pdMS_TO_TICKS(1000)); // Short delay to avoid tight loop
   }
 }
 
@@ -391,7 +409,8 @@ void serverInit()
               configData.save("/config.json");
 
               request->reply("OK");
-              configData.connectedToAP = false;
+              WiFi.softAPdisconnect();
+              dnsServer.stop();
               xEventGroupSetBits(networkEventGroup, MANUAL_TRIGGER_BIT);
               return ESP_OK;
             });
@@ -412,7 +431,8 @@ void serverInit()
       configData.save("/config.json");
 
       request->reply("OK");
-      configData.connectedToAP = false;
+      WiFi.softAPdisconnect();
+      dnsServer.stop();
       xEventGroupSetBits(networkEventGroup, MANUAL_TRIGGER_BIT);
       return ESP_OK; });
 

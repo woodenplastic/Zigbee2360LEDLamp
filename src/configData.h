@@ -36,8 +36,6 @@ public:
     bool useStaticEth = false;
     bool ModulErrorLittleFS = false;
 
-    bool connectedToAP = false;
-
     ConfigData() = default;
 
     void make(JsonDocument& doc);
