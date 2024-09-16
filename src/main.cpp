@@ -1,6 +1,5 @@
 #include <Arduino.h>
 
-
 #include <stdarg.h>
 
 #include <initializer_list>
@@ -9,6 +8,42 @@
 #include "M5Stack.h"
 #include "byteArray.h"
 
+#define ZIGBEE_PANID 0x1620
+// #define ZIGBEE_PANID    0x162A
+// #define COORDINNATOR
+
+DRFZigbee zigbee;
+int lastInput = 0;
+int reviceTime = 0;
+
+uint16_t reviceCount = 0, timeoutCount = 0, errorCount = 0;
+unsigned long reviceTime = 0;
+
+bool flushFlag = true;
+
+void configZigbee()
+{
+
+  DRFZigbee::zigbee_arg_t *arg = new DRFZigbee::zigbee_arg_t;
+  zigbee.linkMoudle();
+  zigbee.readModuleparm(arg);
+
+#ifdef COORDINNATOR
+  arg->main_pointType = DRFZigbee::kCoordinator;
+#else
+  arg->main_pointType = DRFZigbee::kEndDevice;
+#endif
+  arg->main_PANID = DRFZigbee::swap<uint16_t>(ZIGBEE_PANID);
+  arg->main_channel = 20;
+  arg->main_transmissionMode = DRFZigbee::kN2Ntransmission;
+  arg->main_ATN = DRFZigbee::kANTEXP;
+
+  Serial.printf("PAIN ID:%04X\r\n", arg->main_PANID);
+
+  zigbee.setModuleparm(*arg);
+  zigbee.rebootModule();
+  delay(500);
+}
 
 #include <WiFi.h>
 #include <WiFiClient.h>
@@ -19,7 +54,6 @@ IPAddress apIP(192, 168, 4, 1);
 IPAddress netMsk(255, 255, 255, 0);
 IPAddress subnet(255, 255, 255, 0);
 #include <ArduinoJson.h>
-
 
 #include "storage.h"
 StorageManager storageManager;
@@ -46,7 +80,6 @@ DNSServer dnsServer;
 // HERE PASSWORD FOR AP // SSID = ALMALOOX
 const char *softAP_password = "12345678";
 
-
 const int maxScanAttempts = 1;
 const int scanInterval = 3000; // Scan every 3 seconds
 
@@ -62,7 +95,6 @@ SemaphoreHandle_t sema_Server = NULL;
 
 TaskHandle_t AutoSaveHandle = NULL;
 TaskHandle_t checkNetworksHandle = NULL;
-TaskHandle_t syncClientsHandle = NULL;
 
 EventGroupHandle_t SERVER_GROUP;
 EventGroupHandle_t networkEventGroup;
@@ -70,10 +102,11 @@ EventGroupHandle_t networkEventGroup;
 const int MANUAL_TRIGGER_BIT = BIT0;
 const int SYNC_CLIENTS_BIT = BIT1;
 
-
-void setLedDutyCycle() {
-  for (int i; i < 2; i++) {
-    ledData* led = configData.getLedData(0);
+void setLedDutyCycle()
+{
+  for (int i; i < 2; i++)
+  {
+    ledData *led = configData.getLedData(0);
     // Constrain the values to be within the PWM range (0-255)
     int pwm1 = constrain(led->warmCycle * 0.25, 0, 255);
     int pwm2 = constrain(led->coldCycle * 0.25, 0, 255);
@@ -81,15 +114,15 @@ void setLedDutyCycle() {
     // Write the PWM values to the specified channels
     ledcWrite(led->warmChannel, pwm1);
     ledcWrite(led->coldChannel, pwm2);
-    
   }
 }
 
-
 // NETWORK ///////////////////////////////////////////////////////////////////////
 
-bool isSSIDAvailable(const char* ssidToFind) {
-  if (ssidToFind == nullptr || *ssidToFind == '\0') {
+bool isSSIDAvailable(const char *ssidToFind)
+{
+  if (ssidToFind == nullptr || *ssidToFind == '\0')
+  {
     return false;
   }
 
@@ -109,7 +142,6 @@ bool isSSIDAvailable(const char* ssidToFind) {
   }
   return false; // Saved SSID not found after scanning
 }
-
 
 void WiFiEvent(WiFiEvent_t event)
 {
@@ -200,66 +232,82 @@ String scanWifiNetworks()
   return jsonResult;
 }
 
-void checkNetwork(void* parameter) {
-  for (;;) {
+void checkNetwork(void *parameter)
+{
+  for (;;)
+  {
     // Wait for either the periodic delay or the manual trigger event
     EventBits_t bits = xEventGroupWaitBits(
-      networkEventGroup,
-      MANUAL_TRIGGER_BIT,
-      pdTRUE, // Clear the bit on exit
-      pdFALSE, // Wait for any bit
-      pdMS_TO_TICKS(30000) // 30-second delay
+        networkEventGroup,
+        MANUAL_TRIGGER_BIT,
+        pdTRUE,              // Clear the bit on exit
+        pdFALSE,             // Wait for any bit
+        pdMS_TO_TICKS(30000) // 30-second delay
     );
-    
+
     // Check if we need to connect to a Wi-Fi network
-    if ((WiFi.softAPgetStationNum() == 0) && !WiFi.isConnected()) {
+    if ((WiFi.softAPgetStationNum() == 0) && !WiFi.isConnected())
+    {
 
       // Handle WiFi mode switching
-      if (WiFi.getMode() == WIFI_STA) {
+      if (WiFi.getMode() == WIFI_STA)
+      {
         WiFi.disconnect();
       }
-      if (WiFi.getMode() == WIFI_AP) {
+      if (WiFi.getMode() == WIFI_AP)
+      {
         WiFi.softAPdisconnect();
         dnsServer.stop();
         WiFi.mode(WIFI_STA);
       }
 
       // Try to connect to the SSID if it's available
-      if (isSSIDAvailable(configData.ssid)) {
-        if (configData.useStaticWiFi) {
+      if (isSSIDAvailable(configData.ssid))
+      {
+        if (configData.useStaticWiFi)
+        {
           WiFi.config(configData.Swifi_ip, configData.Swifi_gw, configData.Swifi_subnet, configData.Swifi_dns);
         }
         WiFi.begin(configData.ssid, configData.password);
         logger.log(ALMALOOX, INFO, "Connecting to %s", configData.ssid);
-        
+
         // Wait for up to 10 seconds to see if the connection is successful
         unsigned long startTime = millis();
         bool connected = false;
-        while (millis() - startTime < 10000) { // 10 seconds timeout
-          if (WiFi.isConnected()) {
+        while (millis() - startTime < 10000)
+        { // 10 seconds timeout
+          if (WiFi.isConnected())
+          {
             connected = true;
             break;
           }
           vTaskDelay(pdMS_TO_TICKS(1000)); // Check every 500 milliseconds
         }
-        
-        if (connected) {
+
+        if (connected)
+        {
           // Successfully connected
           logger.log(ALMALOOX, INFO, "Successfully connected to %s", configData.ssid);
           continue; // Exit the loop and wait for the next event
-        } else {
+        }
+        else
+        {
           // Failed to connect
           logger.log(ALMALOOX, INFO, "Failed to connect to %s, switching to AP mode", configData.ssid);
         }
-      } else {
+      }
+      else
+      {
         logger.log(ALMALOOX, INFO, "No Saved WiFi SSID, starting AP mode");
       }
 
       // Switch to AP mode
-      if (WiFi.getMode() == WIFI_STA) {
+      if (WiFi.getMode() == WIFI_STA)
+      {
         WiFi.mode(WIFI_AP);
       }
-      if (configData.useStaticWiFi) {
+      if (configData.useStaticWiFi)
+      {
         WiFi.softAPConfig(apIP, apIP, IPAddress(255, 255, 255, 0));
       }
       WiFi.softAP(configData.devicename, softAP_password);
@@ -287,17 +335,12 @@ void AutoSave(void *parameter)
   }
 }
 
-void syncClients(void *parameter)
+void syncClients()
 {
-  for (;;)
-  {
-    ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
 
-    String bdata;
-
-    serializeJson(configData.get(), bdata);
-    websocketHandler.sendAll(bdata.c_str());
-  }
+  String bdata;
+  serializeJson(configData.get(), bdata);
+  websocketHandler.sendAll(bdata.c_str());
 }
 
 /////////////////////////////////////////////////////////////
@@ -314,10 +357,10 @@ void serverInit()
   // handler->setFilter(ON_STA_FILTER);
   handler->setCacheControl("max-age=60");
 
-  websocketHandler.onOpen([](PsychicWebSocketClient *client) { 
+  websocketHandler.onOpen([](PsychicWebSocketClient *client)
+                          { 
     logger.log(ALMALOOX, DEBUG, "[socket] connection #%u connected from %s\n", client->socket(), client->remoteIP().toString()); 
-    xTaskNotifyGive(syncClientsHandle);
-  });
+    syncClients(); });
 
   websocketHandler.onFrame([](PsychicWebSocketRequest *request, httpd_ws_frame *frame)
                            {
@@ -336,6 +379,7 @@ void serverInit()
         ledData* led = configData.getLedData(index);
         led->warmCycle = warmCycle;
         led->coldCycle = coldCycle;
+        setLedDutyCycle();
         lastInputTime = millis();
         CONFIG_SAVED = false;
 
@@ -380,21 +424,20 @@ void serverInit()
                    // logger.log(ALMALOOX,DEBUG, "[client] connection #%u closed from %s", client->socket(), client->remoteIP());
                  });
 
-  server.on("/redirect", HTTP_GET, [](PsychicRequest* request)
-    { return request->redirect("http://almaloox.local"); });
+  server.on("/redirect", HTTP_GET, [](PsychicRequest *request)
+            { return request->redirect("http://almaloox.local"); });
 
-  server.on("/connecttest.txt", HTTP_GET, [](PsychicRequest* request)
-    { return request->redirect("http://almaloox.local"); });
+  server.on("/connecttest.txt", HTTP_GET, [](PsychicRequest *request)
+            { return request->redirect("http://almaloox.local"); });
 
-  server.on("/hotspot-detect.html", HTTP_GET, [](PsychicRequest* request)
-    { return request->redirect("http://almaloox.local"); });
+  server.on("/hotspot-detect.html", HTTP_GET, [](PsychicRequest *request)
+            { return request->redirect("http://almaloox.local"); });
 
-  server.on("/generate_204", HTTP_GET, [](PsychicRequest* request) {
-    return request->redirect("http://almaloox.local"); });
+  server.on("/generate_204", HTTP_GET, [](PsychicRequest *request)
+            { return request->redirect("http://almaloox.local"); });
 
-  server.on("/gen_204", HTTP_GET, [](PsychicRequest* request) { 
-    return request->redirect("http://almaloox.local"); });
-
+  server.on("/gen_204", HTTP_GET, [](PsychicRequest *request)
+            { return request->redirect("http://almaloox.local"); });
 
   server.on("/credWifi", HTTP_POST, [](PsychicRequest *request, JsonVariant &json)
             {
@@ -410,8 +453,7 @@ void serverInit()
               WiFi.softAPdisconnect();
               
               xEventGroupSetBits(networkEventGroup, MANUAL_TRIGGER_BIT);
-              return ESP_OK;
-            });
+              return ESP_OK; });
 
   server.on("/credSWifi", HTTP_POST, [](PsychicRequest *request, JsonVariant &json)
             {
@@ -450,30 +492,31 @@ void setup()
 #ifdef ALMALOOX_DEBUG
   Serial.begin(115200);
   logger.registerSerial(ALMALOOX, DEBUG, "ALMALOOX");
+  Serial2.begin(38400, SERIAL_8N1, 16, 17);
 #endif
 
 #ifdef WROVER
   Wire.begin(SDA_PIN, SCL_PIN);
 #endif
 
-
-  if (!storageManager.mountLittleFS()) {
+  if (!storageManager.mountLittleFS())
+  {
     logger.log(ALMALOOX, ERROR, "File System Mount Failed");
     return;
-  } else {
+  }
+  else
+  {
     configData.load("/config.json");
-
   }
 
-
-  for(size_t i; i < LEDCOUNT; i++) {
-    ledData* led = configData.getLedData(i);
-    ledcSetup(led->warmChannel, pwmFreq,pwmResolution);
-    ledcSetup(led->coldChannel, pwmFreq,pwmResolution);
+  for (size_t i; i < LEDCOUNT; i++)
+  {
+    ledData *led = configData.getLedData(i);
+    ledcSetup(led->warmChannel, pwmFreq, pwmResolution);
+    ledcSetup(led->coldChannel, pwmFreq, pwmResolution);
     ledcAttachPin(led->warmPin, led->warmChannel);
     ledcAttachPin(led->coldPin, led->coldChannel);
   }
-
 
   WiFi.onEvent(WiFiEvent);
 
@@ -496,16 +539,38 @@ void setup()
 
   xTaskCreate(AutoSave, "AutoSave", 4096, NULL, 2, &AutoSaveHandle);
   xTaskCreate(checkNetwork, "checkNetwork", 2048, NULL, 1, &checkNetworksHandle);
-  xTaskCreate(syncClients, "Sync CLients", 4096, NULL, 1, &syncClientsHandle);
   xEventGroupSetBits(networkEventGroup, MANUAL_TRIGGER_BIT);
-}
-void loop() {
   setLedDutyCycle();
+  zigbee.begin(Serial2);
+
+  configZigbee();
+
+  reviceTime = millis();
+}
+
+void loop()
+{
+
   // DNS server processing for AP mode
-  if (WiFi.getMode() == WIFI_AP || WiFi.getMode() == WIFI_AP_STA) {
+  if (WiFi.getMode() == WIFI_AP || WiFi.getMode() == WIFI_AP_STA)
+  {
     dnsServer.processNextRequest();
   }
 
+  
+  if (millis() - lastInput >= 50)
+  {
 
+    zigbee.sendDataP2P(DRFZigbee::kP2PShortAddrMode, 0xffff,
+                       {0xaa, 0x55, 0x01, 0x12});
+    lastInput = millis();
+  }
 
+  M5.update();
+
+  /*
+  while(Serial1.available()){
+    Serial.write(Serial1.read());
+  }
+  */
 }
