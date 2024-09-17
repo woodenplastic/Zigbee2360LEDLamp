@@ -10,11 +10,10 @@
 
 #define ZIGBEE_PANID 0x1620
 // #define ZIGBEE_PANID    0x162A
-// #define COORDINNATOR
+#define COORDINNATOR
 
 DRFZigbee zigbee;
 int lastInput = 0;
-int reviceTime = 0;
 
 uint16_t reviceCount = 0, timeoutCount = 0, errorCount = 0;
 unsigned long reviceTime = 0;
@@ -541,8 +540,9 @@ void setup()
   xTaskCreate(checkNetwork, "checkNetwork", 2048, NULL, 1, &checkNetworksHandle);
   xEventGroupSetBits(networkEventGroup, MANUAL_TRIGGER_BIT);
   setLedDutyCycle();
-  zigbee.begin(Serial2);
 
+
+  zigbee.begin(Serial2);
   configZigbee();
 
   reviceTime = millis();
@@ -557,16 +557,82 @@ void loop()
     dnsServer.processNextRequest();
   }
 
-  
-  if (millis() - lastInput >= 50)
+#ifdef COORDINNATOR
+  zigbee.sendDataP2P(DRFZigbee::kP2PShortAddrMode, 0xffff,
+                     {0xaa, 0x55, 0x01, 0x12});
+  delay(50);
+  zigbee.sendCMDAndWaitRevice(0xfc, {0x06, 0x44, 0x54, 0x4b, 0xaa, 0xbb});
+  DRFZigbee::reviceData_t revice;
+    if (zigbee.reviceData(&revice, DRFZigbee::kP2PShortAddrMode, 1000) ==
+      DRFZigbee::kReviceOK)
   {
+    revice.array->printfArray<HardwareSerial>(&Serial);
+  }
+#else
+  DRFZigbee::reviceData_t revice;
+  if (zigbee.reviceData(&revice, DRFZigbee::kP2PShortAddrMode, 1000) ==
+      DRFZigbee::kReviceOK)
+  {
+    revice.array->printfArray<HardwareSerial>(&Serial);
+    if ((revice.array->at(0) == 0xaa) && (revice.array->at(1) == 0x55) &&
+        (revice.array->at(3) == 0x12))
+    {
 
-    zigbee.sendDataP2P(DRFZigbee::kP2PShortAddrMode, 0xffff,
-                       {0xaa, 0x55, 0x01, 0x12});
-    lastInput = millis();
+      reviceCount++;
+    }
+    else
+    {
+
+      errorCount++;
+      Serial.printf("Error\r\n");
+    }
+  }
+  if (reviceCount + errorCount == 10)
+  {
+    char strbuff[256];
+    sprintf(strbuff, "%d %d %d %ld\r\n", reviceCount + errorCount,
+            reviceCount, errorCount, (millis() - reviceTime));
+
+    // M5.Lcd.drawString(strbuff,180,153,2);
+
+    int8_t rssi = -1;
+    do
+    {
+      rssi = zigbee.getModuleRSSI();
+      delay(100);
+    } while (rssi == -1);
+
+    sprintf(strbuff, "RSSI:%d\r\n", rssi);
+
+    while (1)
+    {
+      configZigbee();
+      break;
+    }
+    delay(10);
   }
 
-  M5.update();
+  reviceTime = millis();
+  errorCount = 0;
+  reviceCount = 0;
+  delay(10);
+int8_t rssi = zigbee.getModuleRSSI();
+Serial.printf("rssi:%d",rssi);
+
+
+#endif
+
+  /*
+    if (millis() - lastInput >= 50)
+    {
+
+      zigbee.sendDataP2P(DRFZigbee::kP2PShortAddrMode, 0xffff,
+                         {0xaa, 0x55, 0x01, 0x12});
+      lastInput = millis();
+    }
+  */
+
+  // M5.update();
 
   /*
   while(Serial1.available()){
