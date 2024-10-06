@@ -10,7 +10,7 @@
 
 #define ZIGBEE_PANID 0x1620
 // #define ZIGBEE_PANID    0x162A
-#define COORDINNATOR
+//#define COORDINNATOR
 
 DRFZigbee zigbee;
 int lastInput = 0;
