@@ -8,12 +8,17 @@
 #include "M5Stack.h"
 #include "byteArray.h"
 
-#define ZIGBEE_PANID 0x1620
-// #define ZIGBEE_PANID    0x162A
-//#define COORDINNATOR
+#define ZIGBEE_PANID 0x22DB
+// #define ZIGBEE_PANID    0x162A 0x22DB
+
+// #define COORDINNATOR
+
+char asciiHexList[16] = {'0', '1', '2', '3', '4', '5', '6', '7',
+                         '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
 
 DRFZigbee zigbee;
 int lastInput = 0;
+int lastCheckZigbee = 0;
 
 uint16_t reviceCount = 0, timeoutCount = 0, errorCount = 0;
 unsigned long reviceTime = 0;
@@ -26,6 +31,55 @@ void configZigbee()
   DRFZigbee::zigbee_arg_t *arg = new DRFZigbee::zigbee_arg_t;
   zigbee.linkMoudle();
   zigbee.readModuleparm(arg);
+
+  Serial.printf("main_pointType: %02X\r\n", arg->main_pointType);
+  Serial.printf("main_PANID: %04X\r\n", arg->main_PANID);
+  Serial.printf("main_channel: %02X\r\n", arg->main_channel);
+  Serial.printf("main_transmissionMode: %02X\r\n", arg->main_transmissionMode);
+  Serial.printf("main_customID: %04X\r\n", arg->main_customID);
+  Serial.printf("main_res0: %04X\r\n", arg->main_res0);
+  Serial.printf("main_uartBaud: %02X\r\n", arg->main_uartBaud);
+  Serial.printf("main_uartBit: %02X\r\n", arg->main_uartBit);
+  Serial.printf("main_uatrtStop: %02X\r\n", arg->main_uatrtStop);
+  Serial.printf("main_uartCheck: %02X\r\n", arg->main_uartCheck);
+  Serial.printf("main_res1: %04X\r\n", arg->main_res1);
+  Serial.printf("main_ATN: %02X\r\n", arg->main_ATN);
+  Serial.printf("main_mac: ");
+  for (int i = 0; i < 8; i++)
+  {
+    Serial.printf("%02X", arg->main_mac[i]);
+  }
+  Serial.printf("\r\n");
+
+  Serial.printf("preset_pointType: %02X\r\n", arg->preset_pointType);
+  Serial.printf("preset_PANID: %04X\r\n", arg->preset_PANID);
+  Serial.printf("preset_channel: %02X\r\n", arg->preset_channel);
+  Serial.printf("preset_transmissionMode: %02X\r\n", arg->preset_transmissionMode);
+  Serial.printf("preset_customID: %04X\r\n", arg->preset_customID);
+  Serial.printf("preset_res0: %04X\r\n", arg->preset_res0);
+  Serial.printf("preset_uartBaud: %02X\r\n", arg->preset_uartBaud);
+  Serial.printf("preset_uartBit: %02X\r\n", arg->preset_uartBit);
+  Serial.printf("preset_uatrtStop: %02X\r\n", arg->preset_uatrtStop);
+  Serial.printf("preset_uartCheck: %02X\r\n", arg->preset_uartCheck);
+  Serial.printf("preset_res1: %04X\r\n", arg->preset_res1);
+  Serial.printf("preset_ATN: %02X\r\n", arg->preset_ATN);
+
+  Serial.printf("shortAddr: %04X\r\n", arg->shortAddr);
+  Serial.printf("res3: %02X\r\n", arg->res3);
+  Serial.printf("encryption: %02X\r\n", arg->encryption);
+  Serial.printf("password: ");
+  for (int i = 0; i < 4; i++)
+  {
+    Serial.printf("%02X", arg->password[i]);
+  }
+  Serial.printf("\r\n");
+
+  Serial.printf("Wave: ");
+  for (int i = 0; i < 48; i++)
+  {
+    Serial.printf("%02X", arg->Wave[i]);
+  }
+  Serial.printf("\r\n");
 
 #ifdef COORDINNATOR
   arg->main_pointType = DRFZigbee::kCoordinator;
@@ -481,6 +535,112 @@ void serverInit()
       return ESP_OK; });
 }
 
+void AppCoordinator()
+{
+  Serial.printf("AppCoordinator\r\n");
+
+  DRFZigbee::zigbee_arg_t *arg = new DRFZigbee::zigbee_arg_t;
+  zigbee.readModuleparm(arg);
+  arg->main_pointType = DRFZigbee::kCoordinator;
+
+  zigbee.setModuleparm(*arg);
+  zigbee.rebootModule();
+
+  delete arg;
+}
+
+void AppRouter()
+{
+  Serial.printf("AppRouter\r\n");
+
+  DRFZigbee::zigbee_arg_t *arg = new DRFZigbee::zigbee_arg_t;
+  zigbee.readModuleparm(arg);
+  arg->main_pointType = DRFZigbee::kRouter;
+  arg->main_PANID = DRFZigbee::swap<uint16_t>(ZIGBEE_PANID);
+  arg->main_transmissionMode = DRFZigbee::kN2Ntransmission;
+  arg->main_channel = 20;
+  arg->main_ATN = DRFZigbee::kANTEXP;
+  zigbee.setModuleparm(*arg);
+  zigbee.rebootModule();
+
+  zigbee.readModuleparm(arg);
+  Serial.printf("main_pointType: %02X\r\n", arg->main_pointType);
+  Serial.printf("main_PANID: %04X\r\n", arg->main_PANID);
+  Serial.printf("main_channel: %02X\r\n", arg->main_channel);
+  Serial.printf("main_transmissionMode: %02X\r\n", arg->main_transmissionMode);
+  Serial.printf("main_customID: %04X\r\n", arg->main_customID);
+  Serial.printf("main_res0: %04X\r\n", arg->main_res0);
+  Serial.printf("main_res1: %04X\r\n", arg->main_res1);
+  Serial.printf("main_ATN: %02X\r\n", arg->main_ATN);
+  Serial.printf("main_mac: ");
+  for (int i = 0; i < 8; i++)
+  {
+    Serial.printf("%02X", arg->main_mac[i]);
+  }
+  Serial.printf("\r\n");
+
+  while (1)
+  {
+    DRFZigbee::reviceData_t revice;
+    if (zigbee.reviceData(&revice) == DRFZigbee::kReviceOK)
+    {
+      revice.array->printfArray<HardwareSerial>(&Serial);
+    }
+  }
+}
+
+void AppEndDevice()
+{
+  Serial.printf("AppEndDevice\r\n");
+
+  DRFZigbee::zigbee_arg_t *arg = new DRFZigbee::zigbee_arg_t;
+  zigbee.readModuleparm(arg);
+  arg->main_pointType = DRFZigbee::kEndDevice;
+  arg->main_PANID = DRFZigbee::swap<uint16_t>(ZIGBEE_PANID);
+  arg->main_transmissionMode = DRFZigbee::kN2Ntransmission;
+  zigbee.setModuleparm(*arg);
+  zigbee.rebootModule();
+
+  zigbee.readModuleparm(arg);
+
+  Serial.printf("main_pointType: %02X\r\n", arg->main_pointType);
+  Serial.printf("main_PANID: %04X\r\n", arg->main_PANID);
+  Serial.printf("main_channel: %02X\r\n", arg->main_channel);
+  Serial.printf("main_transmissionMode: %02X\r\n", arg->main_transmissionMode);
+  Serial.printf("main_customID: %04X\r\n", arg->main_customID);
+  Serial.printf("main_res0: %04X\r\n", arg->main_res0);
+  Serial.printf("main_res1: %04X\r\n", arg->main_res1);
+  Serial.printf("main_ATN: %02X\r\n", arg->main_ATN);
+  Serial.printf("main_mac: ");
+
+  Serial.printf("\r\n");
+
+  uint8_t senduff[256];
+  char revicechar[256];
+  uint16_t charPos = 0;
+
+  memset(senduff, 0, 256);
+
+  while (1)
+  {
+    DRFZigbee::reviceData_t revice;
+    if (zigbee.reviceData(&revice, 10) == DRFZigbee::kReviceOK)
+    {
+      revice.array->printfArray<HardwareSerial>(&Serial);
+      memset(revicechar, 0, 256);
+      memcpy(revicechar, revice.array->dataptr(), revice.length);
+    }
+
+    if (digitalRead(5) == LOW)
+    {
+      zigbee.sendDataP2P(DRFZigbee::kP2PShortAddrMode, 0xffff,
+                         senduff, charPos);
+      memset(senduff, 0, 256);
+      charPos = 0;
+    }
+  }
+}
+
 void setup()
 {
   sema_Server = xSemaphoreCreateMutex();
@@ -541,9 +701,148 @@ void setup()
   xEventGroupSetBits(networkEventGroup, MANUAL_TRIGGER_BIT);
   setLedDutyCycle();
 
-
   zigbee.begin(Serial2);
-  configZigbee();
+
+  zigbee.linkMoudle();
+
+  pinMode(5, INPUT_PULLUP);
+
+  xTaskCreate([](void *arg)
+              {
+        uint8_t readbuff[128];
+        while(1){
+            int length = Serial2.available();
+            if( length > 0) {
+    Serial2.readBytes(readbuff,length);Serial.write(readbuff,length);}
+            delay(10);
+        } }, "reviceTask", 2048, nullptr, 2, nullptr);
+
+
+
+  DRFZigbee::zigbee_arg_t *arg1 = new DRFZigbee::zigbee_arg_t;
+  zigbee.readModuleparm(arg1);
+  arg1->main_pointType = DRFZigbee::kRouter;
+  arg1->main_PANID = DRFZigbee::swap<uint16_t>(ZIGBEE_PANID);
+  arg1->main_transmissionMode = DRFZigbee::kN2Ntransmission;
+  arg1->main_channel = 20;
+  arg1->main_ATN = DRFZigbee::kANTEXP;
+  zigbee.setModuleparm(*arg1);
+  zigbee.rebootModule();
+
+
+    //AppRouter();
+    AppEndDevice();
+
+  if (zigbee.sendCMDAndWaitRevice(0xfc, ZIGBEE_CMD_LINKMODULE) !=
+      DRFZigbee::kReviceOK)
+  {
+        Serial.printf("Link Zigbee module faild!code:%d\r\n",zigbee.lastErrorcode); while(1) delay(100);
+  }
+
+  byteArray array;
+  if (zigbee.sendCMDAndWaitRevice(0xfc, ZIGBEE_CMD_READPARM, &array) !=
+      DRFZigbee::kReviceOK)
+  {
+        Serial.printf("Read module pram faild!code:%d\r\n",zigbee.lastErrorcode); while(1) delay(100);
+  }
+
+  if ((array.at(0) != 0x0A) || (array.at(1) != 0x0E))
+  {
+    Serial.println("Read module pram faild!");
+    while (1)
+      delay(100);
+  }
+  array = array.mid(2);
+
+  array.printfArray<HardwareSerial>(&Serial);
+
+  DRFZigbee::zigbee_arg arg;
+  memcpy(arg.Wave, array.dataptr(), sizeof(DRFZigbee::zigbee_arg));
+
+  arg.main_pointType = DRFZigbee::kCoordinator;
+  arg.main_PANID = DRFZigbee::swap<uint16_t>(0x6889);
+  arg.main_channel = 20;
+  arg.main_ATN = DRFZigbee::kANTEXP;
+  arg.main_transmissionMode = DRFZigbee::kN2Ntransmission;
+  arg.main_customID = DRFZigbee::swap<uint16_t>(0x1213);
+  arg.res3 = 0x01;
+
+  byteArray sendArray;
+  sendArray += 0x07;
+  sendArray += byteArray(&arg.Wave[0], 16);
+  sendArray += byteArray(&arg.Wave[24], 16);
+  sendArray += byteArray(&arg.Wave[42], 6);
+
+  sendArray.printfArray<HardwareSerial>(&Serial);
+
+  if (zigbee.sendCMDAndWaitRevice(0xfc, sendArray, &array) !=
+      DRFZigbee::kReviceOK)
+  {
+        Serial.printf("Read module pram faild!code:%d\r\n",zigbee.lastErrorcode); while(1) delay(100);
+  }
+
+  if (zigbee.sendCMDAndWaitRevice(0xfc, {0x06, 0x44, 0x54, 0x4b, 0xaa, 0xbb}) !=
+      DRFZigbee::kReviceOK)
+  {
+        Serial.printf("reboot Zigbee module faild!code:%d\r\n",zigbee.lastErrorcode); while(1) delay(100);
+  }
+
+  delay(1000);
+
+   zigbee.sendDataP2P(DRFZigbee::kP2PShortAddrMode,0x0000,{0x01,0x02,0x03,0x04});
+
+  delay(1000);
+  
+  zigbee.nodeList.clear();
+  for (int i = 0; i < 10; i++)
+  {
+      zigbee.getNetworksTopology();
+      delay(100);
+  }
+  
+  /*
+  M5.Lcd.fillRect(0,0,320,240,TFT_BLACK);
+  int count = 0;
+  for (int i = 0; i < 20; i++)
+  {
+      int n = ( count < 3 ) ? 0 : (int)log2(1-(((count + 3) * (-1)/3)));
+      int angle2 = 120 * pow(0.5,n);
+      int angle = (n > 0) ? angle2 + ( count - 3 * pow(2,n - 1))* angle2 * 2 :
+  ( count % 3 ) * 120;
+      //int angle = ( count < 3 ) ? ( count % 3 ) * 120 : ((120 / (((count /
+  3) * 2))) + ( count % 3 ) * 120); double posX = cos(PI*angle/180) * 100 +
+  160; double posY = sin(PI*angle/180) * 100 + 120;
+
+      Serial.printf("Point %02d:%03d,%03d\r\n",count,(int)posX,(int)posY);
+
+      M5.Lcd.fillEllipse((int)posX,(int)posY,10,10,TFT_WHITE);
+      delay(200);
+      count++;
+  }
+  */
+
+  
+  if( !zigbee.nodeList.empty() )
+  {
+      int count = 0;
+      std::map<int,DRFZigbee::node>::iterator iter;
+      for( iter = zigbee.nodeList.begin(); iter != zigbee.nodeList.end();iter
+  ++ )
+      {
+
+
+          iter->first;
+          iter->second;
+          count++;
+      }
+  }
+  
+
+  // configZigbee();
+
+  // AppRouter();
+  // AppEndDevice();
+  // AppCoordinator();
 
   reviceTime = millis();
 }
@@ -551,92 +850,89 @@ void setup()
 void loop()
 {
 
+  if (digitalRead(5) == LOW)
+  {
+    Serial.printf("press Button\r\n");
+  }
+
   // DNS server processing for AP mode
   if (WiFi.getMode() == WIFI_AP || WiFi.getMode() == WIFI_AP_STA)
   {
     dnsServer.processNextRequest();
   }
 
-#ifdef COORDINNATOR
-  zigbee.sendDataP2P(DRFZigbee::kP2PShortAddrMode, 0xffff,
-                     {0xaa, 0x55, 0x01, 0x12});
-  delay(50);
-  zigbee.sendCMDAndWaitRevice(0xfc, {0x06, 0x44, 0x54, 0x4b, 0xaa, 0xbb});
-  DRFZigbee::reviceData_t revice;
+  /*
+  #ifdef COORDINNATOR
+    zigbee.sendDataP2P(DRFZigbee::kP2PShortAddrMode, 0xffff,
+                       {0xaa, 0x55, 0x01, 0x12});
+    delay(50);
+  #else
+    DRFZigbee::reviceData_t revice;
     if (zigbee.reviceData(&revice, DRFZigbee::kP2PShortAddrMode, 1000) ==
-      DRFZigbee::kReviceOK)
-  {
-    revice.array->printfArray<HardwareSerial>(&Serial);
-  }
-#else
-  DRFZigbee::reviceData_t revice;
-  if (zigbee.reviceData(&revice, DRFZigbee::kP2PShortAddrMode, 1000) ==
-      DRFZigbee::kReviceOK)
-  {
-    revice.array->printfArray<HardwareSerial>(&Serial);
-    if ((revice.array->at(0) == 0xaa) && (revice.array->at(1) == 0x55) &&
-        (revice.array->at(3) == 0x12))
+        DRFZigbee::kReviceOK)
     {
-
-      reviceCount++;
+      revice.array->printfArray<HardwareSerial>(&Serial);
+      if ((revice.array->at(0) == 0xaa) && (revice.array->at(1) == 0x55) &&
+          (revice.array->at(3) == 0x12))
+      {
+        reviceCount++;
+      }
+      else
+      {
+        errorCount++;
+        Serial.printf("Error\r\n");
+      }
     }
-    else
-    {
 
-      errorCount++;
-      Serial.printf("Error\r\n");
+    if (reviceCount + errorCount == 10)
+    {
+      char strbuff[256];
+      sprintf(strbuff, "%d %d %d %ld\r\n", reviceCount + errorCount,
+              reviceCount, errorCount, (millis() - reviceTime));
+
+
+      int8_t rssi = -1;
+      do
+      {
+        rssi = zigbee.getModuleRSSI();
+        delay(100);
+      } while (rssi == -1);
+
+      sprintf(strbuff, "RSSI: -%d\r\n", rssi);
+
+      while (1)
+      {
+        if (millis() - lastCheckZigbee > 1000)
+        {
+          configZigbee();
+          break;
+        }
+      }
+
+      reviceTime = millis();
+      errorCount = 0;
+      reviceCount = 0;
+      delay(10);
     }
-  }
-  if (reviceCount + errorCount == 10)
-  {
-    char strbuff[256];
-    sprintf(strbuff, "%d %d %d %ld\r\n", reviceCount + errorCount,
-            reviceCount, errorCount, (millis() - reviceTime));
 
-    // M5.Lcd.drawString(strbuff,180,153,2);
 
-    int8_t rssi = -1;
-    do
+
+
+    int8_t rssi = zigbee.getModuleRSSI();
+    Serial.printf("rssi:%d",rssi);
+    if( rssi != -1 )
     {
-      rssi = zigbee.getModuleRSSI();
-      delay(100);
-    } while (rssi == -1);
+        char strbuff[256];
+        sprintf(strbuff,"RSSI:%d\r\n",rssi);
 
-    sprintf(strbuff, "RSSI:%d\r\n", rssi);
-
-    while (1)
-    {
-      configZigbee();
-      break;
+        rssiPrintSprite.setTextColor(M5.Lcd.color565(0xab,0xff,0x58));
+        rssiPrintSprite.fillRect(0, 0, 140, 40, M5.Lcd.color565(56, 56, 56));
+        rssiPrintSprite.drawString(strbuff,0,0,4);
+        rssiPrintSprite.pushSprite(180,60);
     }
-    delay(10);
-  }
-
-  reviceTime = millis();
-  errorCount = 0;
-  reviceCount = 0;
-  delay(10);
-int8_t rssi = zigbee.getModuleRSSI();
-Serial.printf("rssi:%d",rssi);
+    delay(200);
 
 
-#endif
-
-  /*
-    if (millis() - lastInput >= 50)
-    {
-
-      zigbee.sendDataP2P(DRFZigbee::kP2PShortAddrMode, 0xffff,
-                         {0xaa, 0x55, 0x01, 0x12});
-      lastInput = millis();
-    }
-  */
-
-  // M5.update();
-
-  /*
-  while(Serial1.available()){
-    Serial.write(Serial1.read());
-  }
-  */
+  #endif
+    */
 }
