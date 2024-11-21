@@ -7,6 +7,47 @@
 #include "DRFZigbee.h"
 #include "M5Stack.h"
 #include "byteArray.h"
+#include "LittleFS.h"
+
+#include <DFRobot_GP8XXX.h>
+
+DFRobot_GP8XXX_IIC GP8413_0(RESOLUTION_15_BIT, 0x59, &Wire);
+DFRobot_GP8XXX_IIC GP8413_1(RESOLUTION_15_BIT, 0x58, &Wire);
+
+// range is 0~10000mv
+void setDacVoltage0(uint16_t vol, uint8_t ch)
+{
+  uint16_t setting_vol = 0;
+  if (vol > 10000)
+  {
+    vol = 10000;
+  }
+  if (ch > 1)
+    ch = 1;
+  setting_vol = (int16_t)((float)vol / 10000.0f * 32767.0f);
+  if (setting_vol > 32767)
+  {
+    setting_vol = 32767;
+  }
+  GP8413_0.setDACOutVoltage(setting_vol, ch);
+}
+
+void setDacVoltage1(uint16_t vol, uint8_t ch)
+{
+  uint16_t setting_vol = 0;
+  if (vol > 10000)
+  {
+    vol = 10000;
+  }
+  if (ch > 1)
+    ch = 1;
+  setting_vol = (int16_t)((float)vol / 10000.0f * 32767.0f);
+  if (setting_vol > 32767)
+  {
+    setting_vol = 32767;
+  }
+  GP8413_1.setDACOutVoltage(setting_vol, ch);
+}
 
 #define ZIGBEE_PANID 0x22DB
 // #define ZIGBEE_PANID    0x162A 0x22DB
@@ -141,9 +182,6 @@ bool CONFIG_SAVED = true;        // Initialize as true to prevent immediate savi
 
 const unsigned int localPort = 53000; // local port to listen for OSC packets (actually not used for sending)
 
-#include <ELog.h>
-#define ALMALOOX 0
-
 SemaphoreHandle_t sema_Server = NULL;
 
 TaskHandle_t AutoSaveHandle = NULL;
@@ -155,11 +193,10 @@ EventGroupHandle_t networkEventGroup;
 const int MANUAL_TRIGGER_BIT = BIT0;
 const int SYNC_CLIENTS_BIT = BIT1;
 
-void setLedDutyCycle()
+void setLedDutyCycle(int index)
 {
-  for (int i; i < 2; i++)
-  {
-    ledData *led = configData.getLedData(0);
+
+    ledData *led = configData.getLedData(index);
     // Constrain the values to be within the PWM range (0-255)
     int pwm1 = constrain(led->warmCycle * 0.25, 0, 255);
     int pwm2 = constrain(led->coldCycle * 0.25, 0, 255);
@@ -167,7 +204,15 @@ void setLedDutyCycle()
     // Write the PWM values to the specified channels
     ledcWrite(led->warmChannel, pwm1);
     ledcWrite(led->coldChannel, pwm2);
-  }
+
+if(index == 0) {
+    setDacVoltage0(led->warmChannel, 0);
+    setDacVoltage0(led->coldChannel, 1);
+}
+else {
+    setDacVoltage1(led->warmChannel, 0);
+    setDacVoltage1(led->coldChannel, 1);
+}
 }
 
 // NETWORK ///////////////////////////////////////////////////////////////////////
@@ -201,49 +246,49 @@ void WiFiEvent(WiFiEvent_t event)
   switch (event)
   {
   case ARDUINO_EVENT_WIFI_READY:
-    logger.log(ALMALOOX, INFO, "WiFi Ready");
+    Serial.printf("WiFi Ready");
     break;
   case ARDUINO_EVENT_WIFI_SCAN_DONE:
-    logger.log(ALMALOOX, INFO, "WiFi Scan Done");
+    Serial.printf("WiFi Scan Done");
     break;
   case ARDUINO_EVENT_WIFI_STA_START:
-    logger.log(ALMALOOX, INFO, "WiFi STA Started");
+    Serial.printf("WiFi STA Started");
     break;
   case ARDUINO_EVENT_WIFI_STA_STOP:
-    logger.log(ALMALOOX, INFO, "WiFi STA Stopped");
+    Serial.printf("WiFi STA Stopped");
     break;
   case ARDUINO_EVENT_WIFI_STA_CONNECTED:
-    logger.log(ALMALOOX, INFO, "WiFi Connected");
+    Serial.printf("WiFi Connected");
     break;
   case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
-    logger.log(ALMALOOX, INFO, "WiFi Disconnected");
+    Serial.printf("WiFi Disconnected");
     break;
   case ARDUINO_EVENT_WIFI_STA_AUTHMODE_CHANGE:
-    logger.log(ALMALOOX, INFO, "WiFi Auth Mode Changed");
+    Serial.printf("WiFi Auth Mode Changed");
     break;
   case ARDUINO_EVENT_WIFI_STA_GOT_IP:
-    logger.log(ALMALOOX, INFO, "WiFi Got IP: %s", WiFi.localIP().toString().c_str());
+    Serial.printf("WiFi Got IP: %s", WiFi.localIP().toString().c_str());
     break;
   case ARDUINO_EVENT_WIFI_STA_LOST_IP:
-    logger.log(ALMALOOX, INFO, "WiFi Lost IP");
+    Serial.printf("WiFi Lost IP");
     break;
   case ARDUINO_EVENT_WIFI_AP_START:
-    logger.log(ALMALOOX, INFO, "WiFi AP Started");
+    Serial.printf("WiFi AP Started");
     break;
   case ARDUINO_EVENT_WIFI_AP_STOP:
-    logger.log(ALMALOOX, INFO, "WiFi AP Stopped");
+    Serial.printf("WiFi AP Stopped");
     break;
   case ARDUINO_EVENT_WIFI_AP_STACONNECTED:
-    logger.log(ALMALOOX, INFO, "Station Connected to WiFi AP");
+    Serial.printf("Station Connected to WiFi AP");
     break;
   case ARDUINO_EVENT_WIFI_AP_STADISCONNECTED:
-    logger.log(ALMALOOX, INFO, "Station Disconnected from WiFi AP");
+    Serial.printf("Station Disconnected from WiFi AP");
     break;
   case ARDUINO_EVENT_WIFI_AP_STAIPASSIGNED:
-    logger.log(ALMALOOX, INFO, "Station IP Assigned in WiFi AP Mode");
+    Serial.printf("Station IP Assigned in WiFi AP Mode");
     break;
   case ARDUINO_EVENT_WIFI_AP_PROBEREQRECVED:
-    logger.log(ALMALOOX, INFO, "Probe Request Received in WiFi AP Mode");
+    Serial.printf("Probe Request Received in WiFi AP Mode");
     break;
   default:
     break;
@@ -256,12 +301,12 @@ String scanWifiNetworks()
   int numNetworks = WiFi.scanNetworks();
   if (numNetworks == WIFI_SCAN_FAILED)
   {
-    logger.log(ALMALOOX, INFO, "Wi-Fi scan failed!");
+    Serial.printf("Wi-Fi scan failed!");
     return "{}";
   }
   else if (numNetworks == 0)
   {
-    logger.log(ALMALOOX, INFO, "No networks found");
+    Serial.printf("No networks found");
     return "[]";
   }
 
@@ -279,8 +324,8 @@ String scanWifiNetworks()
 
   String jsonResult;
   serializeJson(doc, jsonResult);
-  logger.log(ALMALOOX, INFO, "Scanned Wi-Fi Networks:");
-  logger.log(ALMALOOX, INFO, "%s", jsonResult);
+  Serial.printf("Scanned Wi-Fi Networks:");
+  Serial.printf("%s", jsonResult);
 
   return jsonResult;
 }
@@ -322,7 +367,7 @@ void checkNetwork(void *parameter)
           WiFi.config(configData.Swifi_ip, configData.Swifi_gw, configData.Swifi_subnet, configData.Swifi_dns);
         }
         WiFi.begin(configData.ssid, configData.password);
-        logger.log(ALMALOOX, INFO, "Connecting to %s", configData.ssid);
+        Serial.printf("Connecting to %s", configData.ssid);
 
         // Wait for up to 10 seconds to see if the connection is successful
         unsigned long startTime = millis();
@@ -340,18 +385,18 @@ void checkNetwork(void *parameter)
         if (connected)
         {
           // Successfully connected
-          logger.log(ALMALOOX, INFO, "Successfully connected to %s", configData.ssid);
+          Serial.printf("Successfully connected to %s", configData.ssid);
           continue; // Exit the loop and wait for the next event
         }
         else
         {
           // Failed to connect
-          logger.log(ALMALOOX, INFO, "Failed to connect to %s, switching to AP mode", configData.ssid);
+          Serial.printf("Failed to connect to %s, switching to AP mode", configData.ssid);
         }
       }
       else
       {
-        logger.log(ALMALOOX, INFO, "No Saved WiFi SSID, starting AP mode");
+        Serial.printf("No Saved WiFi SSID, starting AP mode");
       }
 
       // Switch to AP mode
@@ -383,7 +428,7 @@ void AutoSave(void *parameter)
       CONFIG_SAVED = true;
       configData.save("/config.json");
 
-      logger.log(ALMALOOX, INFO, "[SYSTEM] AUTOSAVING");
+      Serial.printf("[SYSTEM] AUTOSAVING");
     }
   }
 }
@@ -412,7 +457,7 @@ void serverInit()
 
   websocketHandler.onOpen([](PsychicWebSocketClient *client)
                           { 
-    logger.log(ALMALOOX, DEBUG, "[socket] connection #%u connected from %s\n", client->socket(), client->remoteIP().toString()); 
+    Serial.printf( "[socket] connection #%u connected from %s\n", client->socket(), client->remoteIP().toString()); 
     syncClients(); });
 
   websocketHandler.onFrame([](PsychicWebSocketRequest *request, httpd_ws_frame *frame)
@@ -423,7 +468,7 @@ void serverInit()
       return ESP_FAIL;
     }
     else {
-      logger.log(ALMALOOX, DEBUG, "Received JSON payload: %s", frame->payload);
+      Serial.printf( "Received JSON payload: %s", frame->payload);
       JsonObject obj = doc["leds"];
       if(!obj.isNull()) {
         int index = obj["index"];
@@ -432,7 +477,7 @@ void serverInit()
         ledData* led = configData.getLedData(index);
         led->warmCycle = warmCycle;
         led->coldCycle = coldCycle;
-        setLedDutyCycle();
+        setLedDutyCycle(index);
         lastInputTime = millis();
         CONFIG_SAVED = false;
 
@@ -446,7 +491,7 @@ void serverInit()
 
   websocketHandler.onClose([](PsychicWebSocketClient *client)
                            {
-                             // logger.log(ALMALOOX,DEBUG, "[socket] connection #%u closed from %s", client->socket(), client->remoteIP());
+                             // Serial.printf("[socket] connection #%u closed from %s", client->socket(), client->remoteIP());
                            });
 
   // attach the handler to /ws.  You can then connect to ws://ip.address/ws
@@ -456,11 +501,11 @@ void serverInit()
       //EventSource server
       // curl -i -N http://psychic.local/events
       eventSource.onOpen([](PsychicEventSourceClient *client) {
-        logger.log(ALMALOOX,INFO, "[eventsource] connection #%u connected from %s\n", client->socket(), client->remoteIP().toString());
+        Serial.printf([eventsource] connection #%u connected from %s\n", client->socket(), client->remoteIP().toString());
         client->send("Hello user!", NULL, millis(), 1000);
       });
       eventSource.onClose([](PsychicEventSourceClient *client) {
-        logger.log(ALMALOOX,INFO, "[eventsource] connection #%u closed from %s\n", client->socket(), client->remoteIP().toString());
+        Serial.printf([eventsource] connection #%u closed from %s\n", client->socket(), client->remoteIP().toString());
       });
       server.on("/events", &eventSource);
 
@@ -468,13 +513,13 @@ void serverInit()
 
   server.onOpen([](PsychicClient *client)
                 {
-                  // logger.log(ALMALOOX,DEBUG, "[client connection #%u connected from %s", client->socket(), client->remoteIP());
+                  // Serial.printf("[client connection #%u connected from %s", client->socket(), client->remoteIP());
                   // syncClients();
                 });
 
   server.onClose([](PsychicClient *client)
                  {
-                   // logger.log(ALMALOOX,DEBUG, "[client] connection #%u closed from %s", client->socket(), client->remoteIP());
+                   // Serial.printf("[client] connection #%u closed from %s", client->socket(), client->remoteIP());
                  });
 
   server.on("/redirect", HTTP_GET, [](PsychicRequest *request)
@@ -650,17 +695,14 @@ void setup()
 
 #ifdef ALMALOOX_DEBUG
   Serial.begin(115200);
-  logger.registerSerial(ALMALOOX, DEBUG, "ALMALOOX");
   Serial2.begin(38400, SERIAL_8N1, 16, 17);
 #endif
 
-#ifdef WROVER
-  Wire.begin(SDA_PIN, SCL_PIN);
-#endif
+  Wire.begin(SDA, SCL);
 
   if (!storageManager.mountLittleFS())
   {
-    logger.log(ALMALOOX, ERROR, "File System Mount Failed");
+    Serial.printf("File System Mount Failed");
     return;
   }
   else
@@ -687,11 +729,11 @@ void setup()
   if (MDNS.begin(configData.devicename))
   {
     MDNS.addService("http", "tcp", 80);
-    logger.log(ALMALOOX, DEBUG, "MDNS: started");
+    Serial.printf("MDNS: started");
   }
   else
   {
-    logger.log(ALMALOOX, ERROR, "MDNS: failed to start");
+    Serial.printf("MDNS: failed to start");
   }
 
   serverInit();
@@ -699,161 +741,170 @@ void setup()
   xTaskCreate(AutoSave, "AutoSave", 4096, NULL, 2, &AutoSaveHandle);
   xTaskCreate(checkNetwork, "checkNetwork", 2048, NULL, 1, &checkNetworksHandle);
   xEventGroupSetBits(networkEventGroup, MANUAL_TRIGGER_BIT);
-  setLedDutyCycle();
+  setLedDutyCycle(0);
+  setLedDutyCycle(1);
 
-  zigbee.begin(Serial2);
-
-  zigbee.linkMoudle();
-
-  pinMode(5, INPUT_PULLUP);
-
-  xTaskCreate([](void *arg)
-              {
-        uint8_t readbuff[128];
-        while(1){
-            int length = Serial2.available();
-            if( length > 0) {
-    Serial2.readBytes(readbuff,length);Serial.write(readbuff,length);}
-            delay(10);
-        } }, "reviceTask", 2048, nullptr, 2, nullptr);
-
-
-
-  DRFZigbee::zigbee_arg_t *arg1 = new DRFZigbee::zigbee_arg_t;
-  zigbee.readModuleparm(arg1);
-  arg1->main_pointType = DRFZigbee::kRouter;
-  arg1->main_PANID = DRFZigbee::swap<uint16_t>(ZIGBEE_PANID);
-  arg1->main_transmissionMode = DRFZigbee::kN2Ntransmission;
-  arg1->main_channel = 20;
-  arg1->main_ATN = DRFZigbee::kANTEXP;
-  zigbee.setModuleparm(*arg1);
-  zigbee.rebootModule();
-
-
-    //AppRouter();
-    AppEndDevice();
-
-  if (zigbee.sendCMDAndWaitRevice(0xfc, ZIGBEE_CMD_LINKMODULE) !=
-      DRFZigbee::kReviceOK)
+  if (GP8413_0.begin() != 0)
   {
-        Serial.printf("Link Zigbee module faild!code:%d\r\n",zigbee.lastErrorcode); while(1) delay(100);
+    Serial.println("Init Fail!");
+  } else {
+        // set channel0
+    setDacVoltage0(0, 0);
+    // set channel1
+    setDacVoltage0(0, 1);
   }
 
-  byteArray array;
-  if (zigbee.sendCMDAndWaitRevice(0xfc, ZIGBEE_CMD_READPARM, &array) !=
-      DRFZigbee::kReviceOK)
+
+    if (GP8413_1.begin() != 0)
   {
-        Serial.printf("Read module pram faild!code:%d\r\n",zigbee.lastErrorcode); while(1) delay(100);
+    Serial.println("Init Fail!");
+  } else {
+        // set channel0
+    setDacVoltage1(0, 0);
+    // set channel1
+    setDacVoltage1(0, 1);
   }
 
-  if ((array.at(0) != 0x0A) || (array.at(1) != 0x0E))
-  {
-    Serial.println("Read module pram faild!");
-    while (1)
-      delay(100);
-  }
-  array = array.mid(2);
-
-  array.printfArray<HardwareSerial>(&Serial);
-
-  DRFZigbee::zigbee_arg arg;
-  memcpy(arg.Wave, array.dataptr(), sizeof(DRFZigbee::zigbee_arg));
-
-  arg.main_pointType = DRFZigbee::kCoordinator;
-  arg.main_PANID = DRFZigbee::swap<uint16_t>(0x6889);
-  arg.main_channel = 20;
-  arg.main_ATN = DRFZigbee::kANTEXP;
-  arg.main_transmissionMode = DRFZigbee::kN2Ntransmission;
-  arg.main_customID = DRFZigbee::swap<uint16_t>(0x1213);
-  arg.res3 = 0x01;
-
-  byteArray sendArray;
-  sendArray += 0x07;
-  sendArray += byteArray(&arg.Wave[0], 16);
-  sendArray += byteArray(&arg.Wave[24], 16);
-  sendArray += byteArray(&arg.Wave[42], 6);
-
-  sendArray.printfArray<HardwareSerial>(&Serial);
-
-  if (zigbee.sendCMDAndWaitRevice(0xfc, sendArray, &array) !=
-      DRFZigbee::kReviceOK)
-  {
-        Serial.printf("Read module pram faild!code:%d\r\n",zigbee.lastErrorcode); while(1) delay(100);
-  }
-
-  if (zigbee.sendCMDAndWaitRevice(0xfc, {0x06, 0x44, 0x54, 0x4b, 0xaa, 0xbb}) !=
-      DRFZigbee::kReviceOK)
-  {
-        Serial.printf("reboot Zigbee module faild!code:%d\r\n",zigbee.lastErrorcode); while(1) delay(100);
-  }
-
-  delay(1000);
-
-   zigbee.sendDataP2P(DRFZigbee::kP2PShortAddrMode,0x0000,{0x01,0x02,0x03,0x04});
-
-  delay(1000);
-  
-  zigbee.nodeList.clear();
-  for (int i = 0; i < 10; i++)
-  {
-      zigbee.getNetworksTopology();
-      delay(100);
-  }
-  
   /*
-  M5.Lcd.fillRect(0,0,320,240,TFT_BLACK);
-  int count = 0;
-  for (int i = 0; i < 20; i++)
-  {
-      int n = ( count < 3 ) ? 0 : (int)log2(1-(((count + 3) * (-1)/3)));
-      int angle2 = 120 * pow(0.5,n);
-      int angle = (n > 0) ? angle2 + ( count - 3 * pow(2,n - 1))* angle2 * 2 :
-  ( count % 3 ) * 120;
-      //int angle = ( count < 3 ) ? ( count % 3 ) * 120 : ((120 / (((count /
-  3) * 2))) + ( count % 3 ) * 120); double posX = cos(PI*angle/180) * 100 +
-  160; double posY = sin(PI*angle/180) * 100 + 120;
-
-      Serial.printf("Point %02d:%03d,%03d\r\n",count,(int)posX,(int)posY);
-
-      M5.Lcd.fillEllipse((int)posX,(int)posY,10,10,TFT_WHITE);
-      delay(200);
-      count++;
-  }
-  */
-
-  
-  if( !zigbee.nodeList.empty() )
-  {
-      int count = 0;
-      std::map<int,DRFZigbee::node>::iterator iter;
-      for( iter = zigbee.nodeList.begin(); iter != zigbee.nodeList.end();iter
-  ++ )
-      {
 
 
-          iter->first;
-          iter->second;
-          count++;
-      }
-  }
-  
+    zigbee.begin(Serial2);
 
-  // configZigbee();
+    zigbee.linkMoudle();
 
-  // AppRouter();
-  // AppEndDevice();
-  // AppCoordinator();
+    pinMode(5, INPUT_PULLUP);
 
-  reviceTime = millis();
+    xTaskCreate([](void *arg)
+                {
+          uint8_t readbuff[128];
+          while(1){
+              int length = Serial2.available();
+              if( length > 0) {
+      Serial2.readBytes(readbuff,length);Serial.write(readbuff,length);}
+              delay(10);
+          } }, "reviceTask", 2048, nullptr, 2, nullptr);
+
+
+
+    DRFZigbee::zigbee_arg_t *arg1 = new DRFZigbee::zigbee_arg_t;
+    zigbee.readModuleparm(arg1);
+    arg1->main_pointType = DRFZigbee::kRouter;
+    arg1->main_PANID = DRFZigbee::swap<uint16_t>(ZIGBEE_PANID);
+    arg1->main_transmissionMode = DRFZigbee::kN2Ntransmission;
+    arg1->main_channel = 20;
+    arg1->main_ATN = DRFZigbee::kANTEXP;
+    zigbee.setModuleparm(*arg1);
+    zigbee.rebootModule();
+
+
+      //AppRouter();
+      AppEndDevice();
+
+    if (zigbee.sendCMDAndWaitRevice(0xfc, ZIGBEE_CMD_LINKMODULE) !=
+        DRFZigbee::kReviceOK)
+    {
+          Serial.printf("Link Zigbee module faild!code:%d\r\n",zigbee.lastErrorcode); while(1) delay(100);
+    }
+
+    byteArray array;
+    if (zigbee.sendCMDAndWaitRevice(0xfc, ZIGBEE_CMD_READPARM, &array) !=
+        DRFZigbee::kReviceOK)
+    {
+          Serial.printf("Read module pram faild!code:%d\r\n",zigbee.lastErrorcode); while(1) delay(100);
+    }
+
+    if ((array.at(0) != 0x0A) || (array.at(1) != 0x0E))
+    {
+      Serial.println("Read module pram faild!");
+      while (1)
+        delay(100);
+    }
+    array = array.mid(2);
+
+    array.printfArray<HardwareSerial>(&Serial);
+
+    DRFZigbee::zigbee_arg arg;
+    memcpy(arg.Wave, array.dataptr(), sizeof(DRFZigbee::zigbee_arg));
+
+    arg.main_pointType = DRFZigbee::kCoordinator;
+    arg.main_PANID = DRFZigbee::swap<uint16_t>(0x6889);
+    arg.main_channel = 20;
+    arg.main_ATN = DRFZigbee::kANTEXP;
+    arg.main_transmissionMode = DRFZigbee::kN2Ntransmission;
+    arg.main_customID = DRFZigbee::swap<uint16_t>(0x1213);
+    arg.res3 = 0x01;
+
+    byteArray sendArray;
+    sendArray += 0x07;
+    sendArray += byteArray(&arg.Wave[0], 16);
+    sendArray += byteArray(&arg.Wave[24], 16);
+    sendArray += byteArray(&arg.Wave[42], 6);
+
+    sendArray.printfArray<HardwareSerial>(&Serial);
+
+    if (zigbee.sendCMDAndWaitRevice(0xfc, sendArray, &array) !=
+        DRFZigbee::kReviceOK)
+    {
+          Serial.printf("Read module pram faild!code:%d\r\n",zigbee.lastErrorcode); while(1) delay(100);
+    }
+
+    if (zigbee.sendCMDAndWaitRevice(0xfc, {0x06, 0x44, 0x54, 0x4b, 0xaa, 0xbb}) !=
+        DRFZigbee::kReviceOK)
+    {
+          Serial.printf("reboot Zigbee module faild!code:%d\r\n",zigbee.lastErrorcode); while(1) delay(100);
+    }
+
+    delay(1000);
+
+     zigbee.sendDataP2P(DRFZigbee::kP2PShortAddrMode,0x0000,{0x01,0x02,0x03,0x04});
+
+    delay(1000);
+
+    zigbee.nodeList.clear();
+    for (int i = 0; i < 10; i++)
+    {
+        zigbee.getNetworksTopology();
+        delay(100);
+    }
+
+
+    if( !zigbee.nodeList.empty() )
+    {
+        int count = 0;
+        std::map<int,DRFZigbee::node>::iterator iter;
+        for( iter = zigbee.nodeList.begin(); iter != zigbee.nodeList.end();iter
+    ++ )
+        {
+
+
+            iter->first;
+            iter->second;
+            count++;
+        }
+    }
+
+
+    // configZigbee();
+
+    // AppRouter();
+    // AppEndDevice();
+    // AppCoordinator();
+
+    reviceTime = millis();
+
+
+    */
 }
 
 void loop()
 {
 
-  if (digitalRead(5) == LOW)
-  {
-    Serial.printf("press Button\r\n");
-  }
+  /*
+    if (digitalRead(5) == LOW)
+    {
+      Serial.printf("press Button\r\n");
+    }
+  */
 
   // DNS server processing for AP mode
   if (WiFi.getMode() == WIFI_AP || WiFi.getMode() == WIFI_AP_STA)
