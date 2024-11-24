@@ -10,6 +10,8 @@ function poweron() {
   led_instances.forEach( led => {
     led.slider1.value = 0;
     led.slider2.value = 0;
+    const data = { "leds":[{"index":led.index, "warmCycle": led.slider1.value, "coldCycle": led.slider2.value}]};
+    wsJson.send(JSON.stringify(data));
   })
 }
 
@@ -37,10 +39,31 @@ class WebSocketJson {
         try {
           const data = JSON.parse(event.data);
 
+<<<<<<< HEAD
+=======
+          if (data.hasOwnProperty("config")) {
+            const config = data.config;
+  
+            Object.entries(config).forEach(([key, value]) => {
+              const element = document.getElementById(key);
+              if (element) {
+                if (element.tagName === 'INPUT' && element.type === 'text') {
+                  element.placeholder = value;
+                }
+                if (element.tagName === 'BUTTON') {
+                  element.classList.toggle('active', value);
+                }
+              }
+            });
+          }
+
+
+>>>>>>> 40c72cb7ca439281f7263abdc4b4af17ffa889a0
           if (data.hasOwnProperty("leds") && Array.isArray(data.leds)) {
             data.leds.forEach(led => {
               // Create an instance if it doesn't exist
               if (!led_instances[led.index]) {
+<<<<<<< HEAD
                 led_instances[led.index] = new LED(led);
               } else {
                 // Update the existing instance
@@ -48,6 +71,22 @@ class WebSocketJson {
               }
             });
           }
+=======
+                console.log(`Creating new LED instance for index ${led.index}`);
+                led_instances[led.index] = new LED(led);
+              } else {
+                // Update the existing instance
+                console.log(`Updating LED instance for index ${led.index}`);
+                led_instances[led.index].set(led);
+              }
+            });
+
+            const loader = document.getElementById('loader');
+            loader.style.visibility = 'hidden';
+          }
+
+
+>>>>>>> 40c72cb7ca439281f7263abdc4b4af17ffa889a0
   
         } catch (e) {
           console.error("Error processing the message:", e);
@@ -103,22 +142,32 @@ class WebSocketJson {
 
 
   class LED {
-    constructor(data, position) {
+    constructor(data) {
       this.index = data.index;
-      this.position = position
+      this.position = data.position
       this.positionContainer = document.getElementById("sliderContainers");
+
       this.createElements(data);
       this.addEventListeners();
     }
   
     createElements(data) {
+
+          // Check if the element already exists
+    this.slidercontainer = document.getElementById(`sliderContainer_${this.index}`);
+    if (this.slidercontainer) {
+      console.log(`Element for index ${this.index} already exists.`);
+      return;
+    }
+
       this.slidercontainer = document.createElement('div');
+      this.slidercontainer.id = `sliderContainer_${this.index}`;
       this.slidercontainer.className = 'slider-container';
       
       this.sliderlabel = document.createElement('div');
       this.sliderlabel.className = 'slider-label';
-      //this.sliderlabel.innerHTML = `${this.position}`;
-      this.sliderlabel.innerHTML = "FRONT";
+      this.sliderlabel.innerHTML = `${this.position}`;
+      //this.sliderlabel.innerHTML = "FRONT";
 
       this.slidercontainer1 = document.createElement('div');
       this.slidercontainer1.className = 'slider slider1';
@@ -127,7 +176,7 @@ class WebSocketJson {
       this.slider1.type = 'range';
       this.slider1.className = 'slider';
       this.slider1.id = `slider1_${this.index}`;
-      this.slider1.min = 100;
+      this.slider1.min = 0;
       this.slider1.max = 1024;
       this.slider1.step = 10;
       this.slider1.value = data.warmCycle;
@@ -145,7 +194,7 @@ class WebSocketJson {
       this.slider2.type = 'range';
       this.slider2.className = 'slider';
       this.slider2.id = `slider2_${this.index}`;
-      this.slider2.min = 150;
+      this.slider2.min = 0;
       this.slider2.max = 1024;
       this.slider2.step = 10;
       this.slider2.value = data.coldCycle;
@@ -173,7 +222,7 @@ class WebSocketJson {
   
       this.slidercontainer.querySelectorAll('input').forEach(element => {
         element.addEventListener('input', () => {
-          const data = { "leds":{"index":this.index, "warmCycle": this.slider1.value, "coldCycle": this.slider2.value}  };
+          const data = { "leds":[{"index":this.index, "warmCycle": this.slider1.value, "coldCycle": this.slider2.value}]};
           wsJson.send(JSON.stringify(data));
 
         });
@@ -184,17 +233,11 @@ class WebSocketJson {
     set(data) {
          this.slider1.value = data.warmCycle
          this.slider2.value = data.coldCycle
-         this.sliderlabel.innerHTML = data.position
+        // this.sliderlabel.innerHTML = data.position
     }
   
   }
   
-
-
-
-
-
-
 
 
   class WiFiScanner {
@@ -516,6 +559,7 @@ async function handleSaveWifi() {
       
       wsJson = new WebSocketJson("ws://" + window.location.hostname + "/ws");
       //wsJson = new WebSocketJson(`ws://localhost:5500/ws`);
+      document.getElementById("powerButton").addEventListener("click", poweron);
 
     });
 

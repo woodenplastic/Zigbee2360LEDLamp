@@ -2,8 +2,8 @@ const WebSocket = require("ws");
 
 const config = {
   leds: [
-    { index: 0, warmCycle: 0, coldCycle: 1013 },
-    { index: 1, warmCycle: 0, coldCycle: 1013 },
+    { index: 0, warmCycle: 0, coldCycle: 1013, position:"FRONT" },
+    { index: 1, warmCycle: 0, coldCycle: 1013, position:"AURA" },
   ],
 };
 

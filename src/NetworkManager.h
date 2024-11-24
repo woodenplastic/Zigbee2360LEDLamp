@@ -1,78 +1,68 @@
 #ifndef NETWORK_MANAGER_H
 #define NETWORK_MANAGER_H
 
-
 #include <WiFi.h>
 #include <ArduinoJson.h>
 #include <IPAddress.h>
 #include <DNSServer.h>
 #include <ESPmDNS.h>
-#include <WiFiUdp.h>
-extern WiFiUDP Udp;
 
 #include "configData.h"
 
-#define NET_TIMEOUT_MS 20000 
-#define WIFI_RECOVER_TIME_MS 30000 
+#define NET_TIMEOUT_MS 20000
+#define WIFI_RECOVER_TIME_MS 30000
 
-
-
-class NetworkManager {
+class NetworkManager
+{
 public:
     // Static method to get the singleton instance
-    static NetworkManager& getInstance() {
+    static NetworkManager &getInstance()
+    {
         static NetworkManager instance;
         return instance;
     }
 
-    void check() {
-        if (WiFi.softAPgetStationNum() == 0 && !WiFi.isConnected()) {
+    void check()
+    {
+        if (WiFi.softAPgetStationNum() == 0 && !WiFi.isConnected())
+        {
             prepWifi();
 
-            if (!connectSTA()) {
+            if (!connectSTA())
+            {
                 connectAP();
             }
         }
     }
 
-    void init() {
+    void init()
+    {
 
         WiFi.onEvent(WiFiEventHandler);
 
         WiFi.mode(WIFI_STA);
         WiFi.setHostname(config.hardware.devicename);
 
-
-        Udp.begin(udpPort);
-
-
-        if (MDNS.begin(config.hardware.devicename)) {
+        if (MDNS.begin(config.hardware.devicename))
+        {
             MDNS.addService("http", "tcp", 80);
             Serial.printf("[NETWORK] MDNS: started\n");
-
         }
-        else {
+        else
+        {
             Serial.printf("[NETWORK] MDNS: failed to start\n");
         }
-
-        //Create the DNS task but immediately suspend until we're in WiFi AP mode
-        //dnsServer.start(DNS_PORT, "*", apIP);
-        //xTaskCreate(DNSprocessNextRequest, "DNSprocessNextRequest", 4096, NULL, 1, &DNSprocessNextRequestHandle);
-        //vTaskSuspend(DNSprocessNextRequestHandle);
-        //dnsServer.stop();
-
+        dnsServer.start(DNS_PORT, "*", apIP);
 
     }
 
-
-    void DNSprocessNextRequest(void* parameter) {
-        for (;;) {
-            dnsServer.processNextRequest();
-            vTaskDelay(pdMS_TO_TICKS(20));
-        }
+    void DNSprocessNextRequest()
+    {
+        dnsServer.processNextRequest();
     }
 
-    String scanWifi() {
+    String scanWifi()
+    {
         int numNetworks = WiFi.scanNetworks();
         if (numNetworks == WIFI_SCAN_FAILED)
         {
@@ -104,54 +94,61 @@ public:
         return buf;
     }
 
-
-
     const unsigned int udpPort = 53000;
     const unsigned int udp2Port = 53001;
     const IPAddress broadcastIp = IPAddress(255, 255, 255, 255);
     const IPAddress apIP = IPAddress(192, 168, 4, 1);
     const IPAddress netMsk = IPAddress(255, 255, 255, 0);
     const IPAddress subnet = IPAddress(255, 255, 255, 0);
-    const char* softAP_password = "12345678";
+    const char *softAP_password = "12345678";
     const int maxScanAttempts = 1;
     const int scanInterval = 3000;
     const uint16_t DNS_PORT = 53;
 
 private:
-
     // Constructor and destructor are private to enforce singleton
     NetworkManager() = default;
     ~NetworkManager() = default;
 
     // Delete copy and move constructors
-    NetworkManager(const NetworkManager&) = delete;
-    NetworkManager& operator=(const NetworkManager&) = delete;
+    NetworkManager(const NetworkManager &) = delete;
+    NetworkManager &operator=(const NetworkManager &) = delete;
 
     DNSServer dnsServer;
 
     // Private methods
-    void prepWifi() {
-        if (WiFi.getMode() == WIFI_STA) {
+    void prepWifi()
+    {
+        if (WiFi.getMode() == WIFI_STA)
+        {
             WiFi.disconnect();
         }
-        if (WiFi.getMode() == WIFI_AP) {
+        if (WiFi.getMode() == WIFI_AP)
+        {
+            
             WiFi.softAPdisconnect();
+            //dnsServer.stop();
             WiFi.mode(WIFI_STA);
         }
         WiFi.mode(WIFI_STA);
     }
 
-    bool connectSTA() {
-        if (checkSSID(config.network.ssid)) {
-            if (config.network.useStaticWiFi) {
+    bool connectSTA()
+    {
+        if (checkSSID(config.network.ssid))
+        {
+            if (config.network.useStaticWiFi)
+            {
                 WiFi.config(config.network.Swifi_ip, config.network.Swifi_gw, config.network.Swifi_subnet, config.network.Swifi_dns);
             }
             WiFi.begin(config.network.ssid, config.network.password);
             Serial.printf("[NETWORK] Connecting to %s\n", config.network.ssid);
 
             unsigned long startTime = millis();
-            while (millis() - startTime < 10000) {
-                if (WiFi.isConnected()) {
+            while (millis() - startTime < 10000)
+            {
+                if (WiFi.isConnected())
+                {
                     Serial.printf("[NETWORK] Successfully connected to %s\n", config.network.ssid);
                     return true;
                 }
@@ -159,31 +156,40 @@ private:
             }
             Serial.printf("[NETWORK] Failed to connect to %s, switching to AP mode\n", config.network.ssid);
         }
-        else {
+        else
+        {
             Serial.printf("[NETWORK] No Saved WiFi SSID, starting AP mode\n");
         }
         return false;
     }
 
-    void connectAP() {
-        if (WiFi.getMode() == WIFI_STA) {
+    void connectAP()
+    {
+        if (WiFi.getMode() == WIFI_STA)
+        {
             WiFi.mode(WIFI_AP);
         }
-        if (config.network.useStaticWiFi) {
+        if (config.network.useStaticWiFi)
+        {
             WiFi.softAPConfig(apIP, apIP, IPAddress(255, 255, 255, 0));
         }
         WiFi.softAP(config.hardware.devicename, softAP_password);
     }
 
-    bool checkSSID(const char* ssidToFind) {
-        if (ssidToFind == nullptr || *ssidToFind == '\0') {
+    bool checkSSID(const char *ssidToFind)
+    {
+        if (ssidToFind == nullptr || *ssidToFind == '\0')
+        {
             return false;
         }
         int scanAttempts = 0;
-        while (scanAttempts < 3) {
+        while (scanAttempts < 3)
+        {
             int networkCount = WiFi.scanNetworks();
-            for (size_t i = 0; i < networkCount; ++i) {
-                if (strcmp(WiFi.SSID(i).c_str(), ssidToFind) == 0) {
+            for (size_t i = 0; i < networkCount; ++i)
+            {
+                if (strcmp(WiFi.SSID(i).c_str(), ssidToFind) == 0)
+                {
                     return true;
                 }
             }
@@ -194,7 +200,8 @@ private:
     }
 
     // WiFi event handler
-    static void WiFiEventHandler(WiFiEvent_t event, WiFiEventInfo_t info) {
+    static void WiFiEventHandler(WiFiEvent_t event, WiFiEventInfo_t info)
+    {
         switch (event)
         {
             // WiFi event cases
@@ -250,25 +257,6 @@ private:
             break;
         }
     }
-
-
 };
 
 #endif // NETWORK_MANAGER_H
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
