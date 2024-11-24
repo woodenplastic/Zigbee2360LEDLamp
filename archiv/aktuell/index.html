@@ -12,9 +12,42 @@
     <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
     <link rel="shortcut icon" href="./android-icon.png" sizes="196x196">
 
+    <style>
+        /* Keyframes for spinner animation */
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+    </style>
+    
 </head>
 
 <body>
+
+<div id="loader" style="
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: black;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    opacity: 1;
+    visibility: visible;
+    transition: opacity 0.5s ease;">
+    <div class="spinner" style="
+        width: 50px;
+        height: 50px;
+        border: 5px solid rgba(255, 255, 255, 0.2);
+        border-top: 5px solid white;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;">
+    </div>
+</div>
+
 
     <div class="header">
         <b>almaloox</b>&nbsp;tune

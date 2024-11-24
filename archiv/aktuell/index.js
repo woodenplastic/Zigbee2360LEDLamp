@@ -68,6 +68,9 @@ class WebSocketJson {
                 led_instances[led.index].set(led);
               }
             });
+
+            const loader = document.getElementById('loader');
+            loader.style.visibility = 'hidden';
           }
 
 
