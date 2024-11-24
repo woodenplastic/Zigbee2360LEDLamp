@@ -52,6 +52,8 @@ public:
         {
             Serial.printf("[NETWORK] MDNS: failed to start\n");
         }
+        dnsServer.start(DNS_PORT, "*", apIP);
+
     }
 
     void DNSprocessNextRequest()
@@ -125,7 +127,7 @@ private:
         {
             
             WiFi.softAPdisconnect();
-            dnsServer.stop();
+            //dnsServer.stop();
             WiFi.mode(WIFI_STA);
         }
         WiFi.mode(WIFI_STA);
@@ -172,7 +174,6 @@ private:
             WiFi.softAPConfig(apIP, apIP, IPAddress(255, 255, 255, 0));
         }
         WiFi.softAP(config.hardware.devicename, softAP_password);
-        dnsServer.start(DNS_PORT, "*", apIP);
     }
 
     bool checkSSID(const char *ssidToFind)
