@@ -38,16 +38,16 @@ class WebSocketJson {
           const data = JSON.parse(event.data);
 
           if (data.hasOwnProperty("leds") && Array.isArray(data.leds)) {
-                data.leds.forEach(led => {
-                    // Create an instance if it doesn't exist
-                    if (!led_instances[led.index]) {
-                    led_instances[led.index] = new LED(led);
-                    }
-
-                    led_instances[led.index].set(led);
-                });
-                
-            }
+            data.leds.forEach(led => {
+              // Create an instance if it doesn't exist
+              if (!led_instances[led.index]) {
+                led_instances[led.index] = new LED(led);
+              } else {
+                // Update the existing instance
+                led_instances[led.index].set(led);
+              }
+            });
+          }
   
         } catch (e) {
           console.error("Error processing the message:", e);
