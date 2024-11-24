@@ -1,6 +1,4 @@
 #include <Arduino.h>
-#include <WiFiUdp.h>
-WiFiUDP Udp;
 
 #include <stdarg.h>
 
@@ -24,6 +22,8 @@ uint16_t mapTo15Bit(uint16_t value)
 
   // Perform the mapping calculation
   return (value * 10000) / 1024;
+
+  Serial.printf("Mapped value: %d\n", value);
 }
 
 // range is 0~10000mv
@@ -155,7 +155,7 @@ void configZigbee()
 ConfigManager config;
 
 #include "networkManager.h"
-NetworkManager& network = NetworkManager::getInstance();
+NetworkManager &network = NetworkManager::getInstance();
 
 #include <ArduinoJson.h>
 
@@ -210,14 +210,16 @@ void setLedDutyCycle(int index)
 
   if (index == 0)
   {
-    setDacVoltage0(mapTo15Bit(led->warmChannel), 0);
-    setDacVoltage0(mapTo15Bit(led->coldChannel), 1);
+    setDacVoltage0(mapTo15Bit(led->warmCycle), 0);
+    setDacVoltage0(mapTo15Bit(led->coldCycle), 1);
   }
   else
   {
-    setDacVoltage1(mapTo15Bit(led->warmChannel), 0);
-    setDacVoltage1(mapTo15Bit(led->coldChannel), 1);
+    setDacVoltage1(mapTo15Bit(led->warmCycle), 0);
+    setDacVoltage1(mapTo15Bit(led->coldCycle), 1);
   }
+
+  Serial.printf("LED %d: Warm: %d, Cold: %d\n", index, led->warmCycle, led->coldCycle);
 }
 
 // NETWORK ///////////////////////////////////////////////////////////////////////
@@ -233,11 +235,10 @@ void checkNetwork(void *parameter)
         pdFALSE,
         pdMS_TO_TICKS(30000));
 
-      network.check();
-      vTaskDelay(1);
+    network.check();
+    vTaskDelay(1);
   }
 }
-
 
 void AutoSave(void *parameter)
 {
@@ -269,8 +270,7 @@ void syncClients()
 void serverInit()
 {
 
-
-  server.config.max_uri_handlers = 20; // maximum number of uri handlers (.on() calls)
+  server.config.max_uri_handlers = 10; // maximum number of uri handlers (.on() calls)
 
 #ifdef PSY_ENABLE_SSL
   server.ssl_config.httpd.max_uri_handlers = 20; // maximum number of uri handlers (.on() calls)
@@ -315,22 +315,24 @@ void serverInit()
     }
     else {
       Serial.printf( "Received JSON payload: %s", frame->payload);
-      JsonObject obj = doc["leds"];
-      if(!obj.isNull()) {
-        int index = obj["index"];
-        int warmCycle = obj["warmCycle"];
-        int coldCycle = obj["coldCycle"];
-        ledData* led = config.getLedData(index);
-        led->warmCycle = warmCycle;
-        led->coldCycle = coldCycle;
-        setLedDutyCycle(index);
+      JsonArray data = doc["leds"];
+      if(!data.isNull()) {
+        for (JsonObject item : doc["leds"].as<JsonArray>()) {
+          int index = item["index"];
+          int warmCycle = item["warmCycle"];
+          int coldCycle = item["coldCycle"];
+          ledData* led = config.getLedData(index);
+          led->warmCycle = warmCycle;
+          led->coldCycle = coldCycle;
+          setLedDutyCycle(index);
+        }
+
         lastInputTime = millis();
         CONFIG_SAVED = false;
-
       }
       return ESP_OK;
     } });
-    
+
   websocketHandler.onClose([](PsychicWebSocketClient *client)
                            { Serial.printf("[socket] connection #%u closed from %s", client->socket(), client->remoteIP()); });
 
@@ -566,20 +568,21 @@ void setup()
   setLedDutyCycle(0);
   setLedDutyCycle(1);
 
-
-  for (uint8_t address = 0x58; address <= 0x59; address++) {
+  for (uint8_t address = 0x58; address <= 0x59; address++)
+  {
     Wire.beginTransmission(address);
-    if (Wire.endTransmission() == 0) {
+    if (Wire.endTransmission() == 0)
+    {
       Serial.printf("Found I2C at: 0x%02X\n", address);
     }
-    else {
+    else
+    {
     }
   }
 
-
   if (GP8413_0.begin() != 0)
   {
-    Serial.println("Init Fail!");
+    Serial.println("Init I2C 1 Fail!");
   }
   else
   {
@@ -594,7 +597,7 @@ void setup()
 
   if (GP8413_1.begin() != 0)
   {
-    Serial.println("Init Fail!");
+    Serial.println("Init I2C 2Fail!");
   }
   else
   {
@@ -605,8 +608,6 @@ void setup()
     // set channel1
     setDacVoltage1(led->coldChannel, 1);
   }
-
-
 
   xTaskCreate(AutoSave, "AutoSave", 4096, NULL, 2, &AutoSaveHandle);
 

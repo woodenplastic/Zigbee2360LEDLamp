@@ -7,8 +7,6 @@
 #include <IPAddress.h>
 #include <DNSServer.h>
 #include <ESPmDNS.h>
-#include <WiFiUdp.h>
-extern WiFiUDP Udp;
 
 #include "configData.h"
 
@@ -41,10 +39,6 @@ public:
 
         WiFi.mode(WIFI_STA);
         WiFi.setHostname(config.hardware.devicename);
-
-
-        Udp.begin(udpPort);
-
 
         if (MDNS.begin(config.hardware.devicename)) {
             MDNS.addService("http", "tcp", 80);

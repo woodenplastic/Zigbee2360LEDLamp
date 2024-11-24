@@ -86,7 +86,6 @@ transform:scale(1,2); /* W3C */
 }
 
 .slider input {
-  -webkit-appearance: none;
   width: 100%;
   height: 1px;
   margin: 0px;
