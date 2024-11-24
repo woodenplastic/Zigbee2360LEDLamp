@@ -196,23 +196,25 @@ const int SYNC_CLIENTS_BIT = BIT1;
 void setLedDutyCycle(int index)
 {
 
-    ledData *led = configData.getLedData(index);
-    // Constrain the values to be within the PWM range (0-255)
-    int pwm1 = constrain(led->warmCycle * 0.25, 0, 255);
-    int pwm2 = constrain(led->coldCycle * 0.25, 0, 255);
+  ledData *led = configData.getLedData(index);
+  // Constrain the values to be within the PWM range (0-255)
+  int pwm1 = constrain(led->warmCycle * 0.25, 0, 255);
+  int pwm2 = constrain(led->coldCycle * 0.25, 0, 255);
 
-    // Write the PWM values to the specified channels
-    ledcWrite(led->warmChannel, pwm1);
-    ledcWrite(led->coldChannel, pwm2);
+  // Write the PWM values to the specified channels
+  ledcWrite(led->warmChannel, pwm1);
+  ledcWrite(led->coldChannel, pwm2);
 
-if(index == 0) {
+  if (index == 0)
+  {
     setDacVoltage0(led->warmChannel, 0);
     setDacVoltage0(led->coldChannel, 1);
-}
-else {
+  }
+  else
+  {
     setDacVoltage1(led->warmChannel, 0);
     setDacVoltage1(led->coldChannel, 1);
-}
+  }
 }
 
 // NETWORK ///////////////////////////////////////////////////////////////////////
@@ -747,19 +749,22 @@ void setup()
   if (GP8413_0.begin() != 0)
   {
     Serial.println("Init Fail!");
-  } else {
-        // set channel0
+  }
+  else
+  {
+    // set channel0
     setDacVoltage0(0, 0);
     // set channel1
     setDacVoltage0(0, 1);
   }
 
-
-    if (GP8413_1.begin() != 0)
+  if (GP8413_1.begin() != 0)
   {
     Serial.println("Init Fail!");
-  } else {
-        // set channel0
+  }
+  else
+  {
+    // set channel0
     setDacVoltage1(0, 0);
     // set channel1
     setDacVoltage1(0, 1);
