@@ -37,11 +37,19 @@ public:
 Network() = default;
 };
 
+// Base struct for configuration data
+struct Hardware {
+    char devicename[20] = "ALMALOOX";
+    Hardware() = default;
+};
+
+
 
 class ConfigManager {
     public:
     ConfigManager() = default;
     Network network;
+    Hardware hardware;
 
     ledData* getLedData(size_t index);
     void save();
