@@ -219,7 +219,7 @@ void setLedDutyCycle(int index)
     setDacVoltage1(mapTo15Bit(led->coldCycle), 1);
   }
 
-  Serial.printf("LED %d: Warm: %d, Cold: %d\n", index, led->warmCycle, led->coldCycle);
+  //Serial.printf("LED %d: Warm: %d, Cold: %d\n", index, led->warmCycle, led->coldCycle);
 }
 
 // NETWORK ///////////////////////////////////////////////////////////////////////
@@ -314,7 +314,7 @@ void serverInit()
       return ESP_FAIL;
     }
     else {
-      Serial.printf( "Received JSON payload: %s", frame->payload);
+      //Serial.printf( "Received JSON payload: %s", frame->payload);
       JsonArray data = doc["leds"];
       if(!data.isNull()) {
         for (JsonObject item : doc["leds"].as<JsonArray>()) {
@@ -592,9 +592,10 @@ void setup()
 
     ledData *led = config.getLedData(0);
     // set channel0
-    setDacVoltage0(led->warmChannel, 0);
+    setDacVoltage0(led->warmCycle, 0);
     // set channel1
-    setDacVoltage0(led->coldChannel, 1);
+    setDacVoltage0(led->coldCycle, 1);
+    Serial.printf("LED %d: Warm: %d, Cold: %d\n", index, led->warmCycle, led->coldCycle);
   }
 
   if (GP8413_1.begin() != 0)
@@ -606,9 +607,10 @@ void setup()
     Serial.println("INIT I2C 2 good");
     ledData *led = config.getLedData(1);
     // set channel0
-    setDacVoltage1(led->warmChannel, 0);
+    setDacVoltage1(led->warmCycle, 0);
     // set channel1
-    setDacVoltage1(led->coldChannel, 1);
+    setDacVoltage1(led->coldCycle, 1);
+    Serial.printf("LED %d: Warm: %d, Cold: %d\n", index, led->warmCycle, led->coldCycle);
   }
 
   xTaskCreate(AutoSave, "AutoSave", 4096, NULL, 2, &AutoSaveHandle);
