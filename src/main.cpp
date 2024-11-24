@@ -1,4 +1,6 @@
 #include <Arduino.h>
+#include <WiFiUdp.h>
+WiFiUDP Udp;
 
 #include <stdarg.h>
 
@@ -153,7 +155,8 @@ void configZigbee()
 ConfigManager config;
 
 #include "networkManager.h"
-NetworkManager network(config);
+NetworkManager& network = NetworkManager::getInstance();
+
 #include <ArduinoJson.h>
 
 #include "storage.h"
@@ -230,18 +233,12 @@ void checkNetwork(void *parameter)
         pdFALSE,
         pdMS_TO_TICKS(30000));
 
-    if ((WiFi.softAPgetStationNum() == 0) && !WiFi.isConnected())
-    {
-      network.prepWifi();
-
-      if (!network.connectSTA())
-      {
-        network.connectAP();
-      }
-      vTaskDelay(pdMS_TO_TICKS(1000));
-    }
+      network.check();
+      vTaskDelay(1);
   }
 }
+
+
 void AutoSave(void *parameter)
 {
   const TickType_t xMaxBlockTime = pdMS_TO_TICKS(1000); // Periodic timeout of 1000ms
@@ -271,7 +268,7 @@ void syncClients()
 
 void serverInit()
 {
-  networkEventGroup = xEventGroupCreate();
+
 
   server.config.max_uri_handlers = 20; // maximum number of uri handlers (.on() calls)
 
@@ -561,11 +558,14 @@ void setup()
     ledcAttachPin(led->coldPin, led->coldChannel);
   }
 
+  networkEventGroup = xEventGroupCreate();
+
   network.init();
   serverInit();
 
   xTaskCreate(checkNetwork, "checkNetwork", 4096, NULL, 1, &checkNetworksHandle);
   xEventGroupSetBits(networkEventGroup, MANUAL_TRIGGER_BIT);
+
   setLedDutyCycle(0);
   setLedDutyCycle(1);
 
@@ -579,7 +579,7 @@ void setup()
     }
   }
 
-  
+
   if (GP8413_0.begin() != 0)
   {
     Serial.println("Init Fail!");
