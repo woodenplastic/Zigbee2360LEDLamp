@@ -595,7 +595,7 @@ void setup()
     setDacVoltage0(led->warmCycle, 0);
     // set channel1
     setDacVoltage0(led->coldCycle, 1);
-    Serial.printf("LED %d: Warm: %d, Cold: %d\n", index, led->warmCycle, led->coldCycle);
+    Serial.printf("LED %d: Warm: %d, Cold: %d\n", 0, led->warmCycle, led->coldCycle);
   }
 
   if (GP8413_1.begin() != 0)
@@ -610,7 +610,7 @@ void setup()
     setDacVoltage1(led->warmCycle, 0);
     // set channel1
     setDacVoltage1(led->coldCycle, 1);
-    Serial.printf("LED %d: Warm: %d, Cold: %d\n", index, led->warmCycle, led->coldCycle);
+    Serial.printf("LED %d: Warm: %d, Cold: %d\n", 1, led->warmCycle, led->coldCycle);
   }
 
   xTaskCreate(AutoSave, "AutoSave", 4096, NULL, 2, &AutoSaveHandle);
