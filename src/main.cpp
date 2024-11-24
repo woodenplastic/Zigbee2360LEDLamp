@@ -328,12 +328,9 @@ void serverInit()
         CONFIG_SAVED = false;
 
       }
-
-
-
-
       return ESP_OK;
     } });
+    
   websocketHandler.onClose([](PsychicWebSocketClient *client)
                            { Serial.printf("[socket] connection #%u closed from %s", client->socket(), client->remoteIP()); });
 
