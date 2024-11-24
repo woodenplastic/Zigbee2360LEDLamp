@@ -8,6 +8,8 @@
 #include "M5Stack.h"
 #include "byteArray.h"
 #include "LittleFS.h"
+#include <WiFiUdp.h>
+WiFiUDP udp;
 
 #include <DFRobot_GP8XXX.h>
 
@@ -546,6 +548,7 @@ void setup()
   else
   {
     config.load();
+    config.checkDeviceName();
   }
 
   for (size_t i; i < LEDCOUNT; i++)
@@ -745,15 +748,15 @@ void setup()
 void loop()
 {
 
-  /*
+
 
     // DNS server processing for AP mode
   if (WiFi.getMode() == WIFI_AP || WiFi.getMode() == WIFI_AP_STA)
   {
-    dnsServer.processNextRequest();
+    network.DNSprocessNextRequest();
   }
 
-
+  /*
     if (digitalRead(5) == LOW)
     {
       Serial.printf("press Button\r\n");

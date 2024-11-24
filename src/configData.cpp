@@ -4,6 +4,29 @@
 #include <LittleFS.h>
 #include <StreamUtils.h>
 
+uint32_t ConfigManager::hashAttributes() {
+    // Example attributes
+    uint32_t cpuId = ESP.getEfuseMac(); // Or any other available unique identifier
+    uint32_t flashSize = ESP.getFlashChipSize();
+    uint32_t combined = cpuId ^ flashSize; // Simple combination, consider a better hash function
+
+    // Simple hash to mix bits (consider using a proper hash function)
+    uint32_t hash = (combined >> 16) ^ (combined & 0xFFFF);
+    return hash % 10000; // Reduce to 4-digit number
+}
+
+void ConfigManager::checkDeviceName () {
+  if (strlen(hardware.devicename) == 0) {
+    char newDeviceName[sizeof(hardware.devicename)];
+    snprintf(newDeviceName, sizeof(hardware.devicename), "%s%04d", "ALMALOOX", hashAttributes()); // Use %04d to ensure the number is always 4 digits
+    snprintf(network.URL, sizeof(network.URL), "http://%s.local", newDeviceName);
+    strncpy(hardware.devicename, newDeviceName, sizeof(hardware.devicename));
+  }
+  else {
+    snprintf(network.URL, sizeof(network.URL), "http://%s.local", hardware.devicename);
+  }
+}
+
 
 // Updates the configuration data from a JSON document
 void ConfigManager::read(JsonDocument& doc) {

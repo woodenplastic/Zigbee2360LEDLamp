@@ -18,7 +18,7 @@ class Network {
 public:
     char ssid[30] = "";
     char password[30] = "";
-    char devicename[20] = "";
+    char URL[50];
 
     IPAddress wifi_ip;
     IPAddress wifi_gw;
@@ -31,16 +31,16 @@ public:
     IPAddress Swifi_subnet;
 
     bool useStaticWiFi = false;
-    bool useStaticEth = false;
-    bool ModulErrorLittleFS = false;
+
 
 Network() = default;
 };
 
 // Base struct for configuration data
 struct Hardware {
-    char devicename[20] = "ALMALOOX";
+    char devicename[20] = "";
     Hardware() = default;
+    bool ModulErrorLittleFS = false;
 };
 
 
@@ -56,8 +56,10 @@ class ConfigManager {
     void load();
     void read(JsonDocument& doc);
     JsonDocument write();
+    void checkDeviceName();
 
-    private: 
+    private:
+    uint32_t hashAttributes(); 
     std::vector<ledData> lampdata;
 };
 
