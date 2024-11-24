@@ -10,6 +10,8 @@ function poweron() {
   led_instances.forEach( led => {
     led.slider1.value = 0;
     led.slider2.value = 0;
+    const data = { "leds":[{"index":led.index, "warmCycle": led.slider1.value, "coldCycle": led.slider2.value}]};
+    wsJson.send(JSON.stringify(data));
   })
 }
 
