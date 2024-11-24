@@ -3,33 +3,46 @@
 #include <SD_MMC.h>
 #include <LittleFS.h>
 #include <StreamUtils.h>
-#include <ArduinoJson.h>
 
 
+// Updates the configuration data from a JSON document
+void ConfigManager::read(JsonDocument& doc) {
 
-int ConfigData::calculateState(bool in, bool out)
-{
-  return (out << 1) | in;
-}
+    //serializeJsonPretty(doc, Serial);
+JsonObject obj = doc["config"].as<JsonObject>();
 
-void ConfigData::make(JsonDocument &doc) {
-    serializeJsonPretty(doc, Serial);
+    if (obj["ssid"].is<const char*>()) {
+        strcpy(network.ssid, obj["ssid"].as<const char*>());
+    }
+    if (obj["password"].is<const char*>()) {
+        strcpy(network.password, obj["password"].as<const char*>());
+    }
+    if (obj["wifi_ip"].is<const char*>()) {
+        network.wifi_ip.fromString(obj["wifi_ip"].as<const char*>());
+    }
+    if (obj["wifi_subnet"].is<const char*>()) {
+        network.wifi_subnet.fromString(obj["wifi_subnet"].as<const char*>());
+    }
+    if (obj["wifi_gw"].is<const char*>()) {
+        network.wifi_gw.fromString(obj["wifi_gw"].as<const char*>());
+    }
+    if (obj["wifi_dns"].is<const char*>()) {
+        network.wifi_dns.fromString(obj["wifi_dns"].as<const char*>());
+    }
 
-    useStaticWiFi = doc["useStaticWiFi"].as<bool>();
+    if (obj["useStaticWiFi"].is<bool>()) {
+        network.useStaticWiFi = obj["useStaticWiFi"].as<bool>();
+    }
+    if (obj["Swifi_ip"].is<String>()) {
+        network.Swifi_ip.fromString(obj["Swifi_ip"].as<String>());
+    }
+    if (obj["Swifi_sub"].is<String>()) {
+        network.Swifi_subnet.fromString(obj["Swifi_sub"].as<String>());
+    }
+    if (obj["Swifi_gw"].is<String>()) {
+        network.Swifi_gw.fromString(obj["Swifi_gw"].as<String>());
+    }
 
-    strncpy(devicename, doc["devicename"], sizeof(devicename));
-    strncpy(ssid, doc["ssid"], sizeof(ssid));
-    strncpy(password, doc["password"], sizeof(password));
-
-    wifi_ip.fromString(doc["wifi_ip"].as<String>());
-    wifi_subnet.fromString(doc["wifi_subnet"].as<String>());
-    wifi_gw.fromString(doc["wifi_gw"].as<String>());
-    wifi_dns.fromString(doc["wifi_dns"].as<String>());
-
-    Swifi_ip.fromString(doc["Swifi_ip"].as<String>());
-    Swifi_gw.fromString(doc["Swifi_gw"].as<String>());
-    Swifi_dns.fromString(doc["Swifi_dns"].as<String>());
-    Swifi_subnet.fromString(doc["Swifi_sub"].as<String>());
 
     for (JsonObject leds : doc["leds"].as<JsonArray>()) {
         
@@ -48,23 +61,26 @@ void ConfigData::make(JsonDocument &doc) {
 
 }
 
-JsonDocument ConfigData::get() {
+// Converts configuration data to a JSON document
+JsonDocument ConfigManager::write() {
+
     JsonDocument doc;
 
-    doc["devicename"] = devicename;
+    JsonObject obj = doc["config"].to<JsonObject>();
 
-    doc["ssid"] = ssid;
-    doc["password"] = password;
-    doc["wifi_ip"] = wifi_ip.toString();
-    doc["wifi_subnet"] = wifi_subnet.toString();
-    doc["wifi_gw"] = wifi_gw.toString();
-    doc["wifi_dns"] = wifi_dns.toString();
+    obj["ssid"] = network.ssid;
+    obj["password"] = network.password;
+    obj["wifi_ip"] = network.wifi_ip.toString();
+    obj["wifi_subnet"] = network.wifi_subnet.toString();
+    obj["wifi_gw"] = network.wifi_gw.toString();
+    obj["wifi_dns"] = network.wifi_dns.toString();
 
-    doc["useStaticWiFi"] = useStaticWiFi;
-    doc["Swifi_ip"] = Swifi_ip.toString();
-    doc["Swifi_sub"] = Swifi_subnet.toString();
-    doc["Swifi_gw"] = Swifi_gw.toString();
-    doc["Swifi_dns"] = Swifi_dns.toString();
+    obj["useStaticWiFi"] = network.useStaticWiFi;
+    obj["Swifi_ip"] = network.Swifi_ip.toString();
+    obj["Swifi_sub"] = network.Swifi_subnet.toString();
+    obj["Swifi_gw"] = network.Swifi_gw.toString();
+    obj["Swifi_dns"] = network.Swifi_dns.toString();
+
 
     JsonArray leds = doc["leds"].to<JsonArray>();
 
@@ -83,11 +99,15 @@ JsonDocument ConfigData::get() {
         }
     }
 
-    serializeJsonPretty(doc, Serial);
+    //serializeJsonPretty(doc, Serial);
     return doc;
 }
 
-void ConfigData::save(const char* filePath) {
+// Save button data to filesystem
+void ConfigManager::save() {
+    const char* filePath = "/config.json";
+
+
     auto saveToFilesystem = [&](fs::FS& filesystem) {
         if (filesystem.exists(filePath)) {
             filesystem.remove(filePath);
@@ -100,7 +120,7 @@ void ConfigData::save(const char* filePath) {
         }
 
         WriteBufferingStream bufferedFile(file, 64);
-        if (serializeJson(get(), bufferedFile) == 0) {
+        if (serializeJson(write(), bufferedFile) == 0) {
             Serial.println("Failed to serialize config Settings");
         }
 
@@ -112,11 +132,15 @@ void ConfigData::save(const char* filePath) {
     Serial.printf("Saved %s\n", filePath);
 }
 
-void ConfigData::load(const char* filePath) {
+// Load button data from filesystem
+void ConfigManager::load() {
+
+    const char* filePath = "/config.json";
+
     auto loadFromFilesystem = [&](fs::FS& filesystem, const char* fsName) {
         if (!filesystem.exists(filePath)) {
             Serial.printf("[STORAGE] Config file %s does not exist on %s\n", filePath, fsName);
-            save(filePath);
+            save();
             return;
         }
 
@@ -131,11 +155,11 @@ void ConfigData::load(const char* filePath) {
         file.close();
         if (error) {
             Serial.printf("Failed to deserialize config JSON from %s\n", fsName);
-            save(filePath);
+            save();
             return;
         }
 
-        make(doc);
+        read(doc);
         Serial.printf("Loaded %s\n", filePath);
     };
 
@@ -145,7 +169,7 @@ void ConfigData::load(const char* filePath) {
 }
 
 
-ledData* ConfigData::getLedData(size_t index) {
+ledData* ConfigManager::getLedData(size_t index) {
     if (index < 0) {
         return nullptr;
     }

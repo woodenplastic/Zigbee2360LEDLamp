@@ -2,9 +2,8 @@
 #define CONFIGDATA_H
 
 #include <ArduinoJson.h>
-#include <vector>
+#include <IPAddress.h>
 
-// Define the ledData struct
 struct ledData {
     uint8_t warmPin = 0;
     uint8_t coldPin = 0;
@@ -15,8 +14,7 @@ struct ledData {
     String position = "FRONT";
 };
 
-// Define the ConfigData class
-class ConfigData {
+class Network {
 public:
     char ssid[30] = "";
     char password[30] = "";
@@ -36,21 +34,25 @@ public:
     bool useStaticEth = false;
     bool ModulErrorLittleFS = false;
 
-    ConfigData() = default;
+Network() = default;
+};
 
-    void make(JsonDocument& doc);
-    JsonDocument get();
-    void save(const char* filePath);
-    void load(const char* filePath);
 
-    // Function to get a pointer to ledData at a specific index
+class ConfigManager {
+    public:
+    ConfigManager() = default;
+    Network network;
+
     ledData* getLedData(size_t index);
+    void save();
+    void load();
+    void read(JsonDocument& doc);
+    JsonDocument write();
 
-private:
-    int calculateState(bool in, bool out);
+    private: 
     std::vector<ledData> lampdata;
 };
 
-extern ConfigData configData;
+
 
 #endif // CONFIGDATA_H
