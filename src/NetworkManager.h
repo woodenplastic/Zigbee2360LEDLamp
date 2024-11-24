@@ -6,8 +6,6 @@
 #include <IPAddress.h>
 #include <DNSServer.h>
 #include <ESPmDNS.h>
-#include <WiFiUdp.h>
-extern WiFiUDP udp;
 
 #include "configData.h"
 
@@ -125,8 +123,9 @@ private:
         }
         if (WiFi.getMode() == WIFI_AP)
         {
-            dnsServer.stop();
+            
             WiFi.softAPdisconnect();
+            dnsServer.stop();
             WiFi.mode(WIFI_STA);
         }
         WiFi.mode(WIFI_STA);

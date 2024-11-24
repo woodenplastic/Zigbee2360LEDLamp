@@ -8,8 +8,6 @@
 #include "M5Stack.h"
 #include "byteArray.h"
 #include "LittleFS.h"
-#include <WiFiUdp.h>
-WiFiUDP udp;
 
 #include <DFRobot_GP8XXX.h>
 
@@ -272,7 +270,7 @@ void syncClients()
 void serverInit()
 {
 
-  server.config.max_uri_handlers = 10; // maximum number of uri handlers (.on() calls)
+  server.config.max_uri_handlers = 20; // maximum number of uri handlers (.on() calls)
 
 #ifdef PSY_ENABLE_SSL
   server.ssl_config.httpd.max_uri_handlers = 20; // maximum number of uri handlers (.on() calls)
@@ -331,12 +329,13 @@ void serverInit()
 
         lastInputTime = millis();
         CONFIG_SAVED = false;
+        syncClients();
       }
       return ESP_OK;
     } });
 
   websocketHandler.onClose([](PsychicWebSocketClient *client)
-                           { Serial.printf("[socket] connection #%u closed from %s", client->socket(), client->remoteIP()); });
+                           { Serial.printf("[socket] connection #%u closed from %s", client->socket(), client->remoteIP().toString().c_str()); });
 
   // attach the handler to /ws.  You can then connect to ws://ip.address/ws
   server.on("/ws", &websocketHandler);
@@ -367,19 +366,19 @@ void serverInit()
                  });
 
   server.on("/redirect", HTTP_GET, [](PsychicRequest *request)
-            { return request->redirect("http://almaloox.local"); });
+            { return request->redirect(config.network.URL); });
 
   server.on("/connecttest.txt", HTTP_GET, [](PsychicRequest *request)
-            { return request->redirect("http://almaloox.local"); });
+            { return request->redirect(config.network.URL); });
 
   server.on("/hotspot-detect.html", HTTP_GET, [](PsychicRequest *request)
-            { return request->redirect("http://almaloox.local"); });
+            { return request->redirect(config.network.URL); });
 
   server.on("/generate_204", HTTP_GET, [](PsychicRequest *request)
-            { return request->redirect("http://almaloox.local"); });
+            { return request->redirect(config.network.URL); });
 
   server.on("/gen_204", HTTP_GET, [](PsychicRequest *request)
-            { return request->redirect("http://almaloox.local"); });
+            { return request->redirect(config.network.URL); });
 
   server.on("/credWifi", HTTP_POST, [](PsychicRequest *request, JsonVariant &json)
             {
@@ -748,10 +747,8 @@ void setup()
 void loop()
 {
 
-
-
-    // DNS server processing for AP mode
-  if (WiFi.getMode() == WIFI_AP || WiFi.getMode() == WIFI_AP_STA)
+  // DNS server processing for AP mode
+  if (WiFi.getMode() == WIFI_AP)
   {
     network.DNSprocessNextRequest();
   }

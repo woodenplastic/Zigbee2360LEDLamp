@@ -18,7 +18,7 @@ uint32_t ConfigManager::hashAttributes() {
 void ConfigManager::checkDeviceName () {
   if (strlen(hardware.devicename) == 0) {
     char newDeviceName[sizeof(hardware.devicename)];
-    snprintf(newDeviceName, sizeof(hardware.devicename), "%s%04d", "ALMALOOX", hashAttributes()); // Use %04d to ensure the number is always 4 digits
+    snprintf(newDeviceName, sizeof(hardware.devicename), "%s%04d", "ALMALOOX_", hashAttributes()); // Use %04d to ensure the number is always 4 digits
     snprintf(network.URL, sizeof(network.URL), "http://%s.local", newDeviceName);
     strncpy(hardware.devicename, newDeviceName, sizeof(hardware.devicename));
   }
