@@ -81,7 +81,7 @@ transform:scale(1,2); /* W3C */
 
 .slider {
   width: 80%;
-  margin: 50 auto;
+  margin: 50px;
   position: relative;
 }
 
@@ -132,6 +132,22 @@ height: 2px;
   background: linear-gradient(to right, rgb(255, 200, 0), white);
 }
 
+
+.wifi-button {
+  position: relative;
+  display: block;
+  padding: 0;
+  font-size: 1em;
+  background: linear-gradient(to top, #2e2d2d, #212121);
+  z-index: 2;
+  color: white;
+  border-style: solid;
+  border-width: 1px 1px 0 1px;
+  border-color: #2c2d2c;
+  min-height: 2em;
+  margin-top: 10px;
+  padding: 10px;
+}
 
 .state {
   font-size: 1.2rem;

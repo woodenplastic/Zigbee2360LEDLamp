@@ -1,17 +1,18 @@
 import "./styles.css";
 
-
-let wsJson;
-let wifiScanner;
-let led_instances = [];
-let networkModal;
+window.app = {
+  wsJson: null,
+  wifiScanner: null,
+  led_instances: [],
+  networkModal: null
+}
 
 function poweron() {
-  led_instances.forEach( led => {
+  window.app.led_instances.forEach( led => {
     led.slider1.value = 0;
     led.slider2.value = 0;
     const data = { "leds":[{"index":led.index, "warmCycle": led.slider1.value, "coldCycle": led.slider2.value}]};
-    wsJson.send(JSON.stringify(data));
+    window.app.wsJson.send(JSON.stringify(data));
   })
 }
 
@@ -59,13 +60,13 @@ class WebSocketJson {
           if (data.hasOwnProperty("leds") && Array.isArray(data.leds)) {
             data.leds.forEach(led => {
               // Create an instance if it doesn't exist
-              if (!led_instances[led.index]) {
+              if (!window.app.led_instances[led.index]) {
                 console.log(`Creating new LED instance for index ${led.index}`);
-                led_instances[led.index] = new LED(led);
+                window.app.led_instances[led.index] = new LED(led);
               } else {
                 // Update the existing instance
                 console.log(`Updating LED instance for index ${led.index}`);
-                led_instances[led.index].set(led);
+                window.app.led_instances[led.index].set(led);
               }
             });
 
@@ -210,7 +211,7 @@ class WebSocketJson {
       this.slidercontainer.querySelectorAll('input').forEach(element => {
         element.addEventListener('input', () => {
           const data = { "leds":[{"index":this.index, "warmCycle": this.slider1.value, "coldCycle": this.slider2.value}]};
-          wsJson.send(JSON.stringify(data));
+          window.app.wsJson.send(JSON.stringify(data));
 
         });
       });
@@ -524,15 +525,8 @@ async function handleSaveWifi() {
   }
 
 
-
-
-  
-
   document.addEventListener('DOMContentLoaded', function () {
-
-    
-
-    wifiScanner = new WiFiScanner(
+    window.app.wifiscanner = new WiFiScanner(
         "scanWiFi",
         "scanWiFiSpinner",
         "wifi-list",
@@ -542,9 +536,9 @@ async function handleSaveWifi() {
 
       document.getElementById("toggle-password").addEventListener("change", handlePasswordVisibilityToggle);
 
-      networkModal = new ModalBase("wifi_modal");
+      window.app.networkModal = new ModalBase("wifi_modal");
       
-      wsJson = new WebSocketJson("ws://" + window.location.hostname + "/ws");
+      window.app.wsJson = new WebSocketJson("ws://" + window.location.hostname + "/ws");
       //wsJson = new WebSocketJson(`ws://localhost:5500/ws`);
       document.getElementById("powerButton").addEventListener("click", poweron);
 
