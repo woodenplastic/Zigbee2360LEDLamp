@@ -14,6 +14,16 @@
 DFRobot_GP8XXX_IIC GP8413_0(RESOLUTION_15_BIT, 0x59, &Wire);
 DFRobot_GP8XXX_IIC GP8413_1(RESOLUTION_15_BIT, 0x58, &Wire);
 
+uint16_t mapTo15Bit(uint16_t value)
+{
+  // Ensure the input value is within the expected range
+  if (value > 1024)
+    value = 1024;
+
+  // Perform the mapping calculation
+  return (value * 10000) / 1024;
+}
+
 // range is 0~10000mv
 void setDacVoltage0(uint16_t vol, uint8_t ch)
 {
@@ -139,55 +149,45 @@ void configZigbee()
   delay(500);
 }
 
-#include <WiFi.h>
-#include <WiFiClient.h>
-#include <WiFiUdp.h>
-WiFiUDP Udp;
-const IPAddress broadcastIp(255, 255, 255, 255);
-IPAddress apIP(192, 168, 4, 1);
-IPAddress netMsk(255, 255, 255, 0);
-IPAddress subnet(255, 255, 255, 0);
+#include "configData.h"
+ConfigManager config;
+
+#include "networkManager.h"
+NetworkManager network(config);
 #include <ArduinoJson.h>
 
 #include "storage.h"
 StorageManager storageManager;
 
-#include "configData.h"
-ConfigData configData;
-
 #include <PsychicHttp.h>
 
+// credentials for the /auth-basic and /auth-digest examples
+const char *app_user = "admin";
+const char *app_pass = "admin";
+const char *app_name = "Your App";
+
+// #define PSY_ENABLE_SSL to enable ssl
+#ifdef PSY_ENABLE_SSL
+bool app_enable_ssl = true;
+String server_cert;
+String server_key;
+#endif
+
+// our main server object
+#ifdef PSY_ENABLE_SSL
+PsychicHttpsServer server;
+#else
 PsychicHttpServer server;
+#endif
 PsychicWebSocketHandler websocketHandler;
 PsychicEventSource eventSource;
-
-#include <DNSServer.h>
-const uint16_t DNS_PORT = 53;
-
-DNSServer dnsServer;
-
-#include <ESPmDNS.h>
-
-#define NET_TIMEOUT_MS 20000
-#define WIFI_RECOVER_TIME_MS 30000
-
-// HERE PASSWORD FOR AP // SSID = ALMALOOX
-const char *softAP_password = "12345678";
-
-const int maxScanAttempts = 1;
-const int scanInterval = 3000; // Scan every 3 seconds
 
 unsigned long lastInputTime = 0; // Initialize to 0
 bool CONFIG_SAVED = true;        // Initialize as true to prevent immediate saving
 
-const unsigned int localPort = 53000; // local port to listen for OSC packets (actually not used for sending)
-
-SemaphoreHandle_t sema_Server = NULL;
-
 TaskHandle_t AutoSaveHandle = NULL;
 TaskHandle_t checkNetworksHandle = NULL;
 
-EventGroupHandle_t SERVER_GROUP;
 EventGroupHandle_t networkEventGroup;
 
 const int MANUAL_TRIGGER_BIT = BIT0;
@@ -196,226 +196,52 @@ const int SYNC_CLIENTS_BIT = BIT1;
 void setLedDutyCycle(int index)
 {
 
-    ledData *led = configData.getLedData(index);
-    // Constrain the values to be within the PWM range (0-255)
-    int pwm1 = constrain(led->warmCycle * 0.25, 0, 255);
-    int pwm2 = constrain(led->coldCycle * 0.25, 0, 255);
+  ledData *led = config.getLedData(index);
+  // Constrain the values to be within the PWM range (0-255)
+  int pwm1 = constrain(led->warmCycle * 0.25, 0, 255);
+  int pwm2 = constrain(led->coldCycle * 0.25, 0, 255);
 
-    // Write the PWM values to the specified channels
-    ledcWrite(led->warmChannel, pwm1);
-    ledcWrite(led->coldChannel, pwm2);
+  // Write the PWM values to the specified channels
+  ledcWrite(led->warmChannel, pwm1);
+  ledcWrite(led->coldChannel, pwm2);
 
-if(index == 0) {
-    setDacVoltage0(led->warmChannel, 0);
-    setDacVoltage0(led->coldChannel, 1);
-}
-else {
-    setDacVoltage1(led->warmChannel, 0);
-    setDacVoltage1(led->coldChannel, 1);
-}
+  if (index == 0)
+  {
+    setDacVoltage0(mapTo15Bit(led->warmChannel), 0);
+    setDacVoltage0(mapTo15Bit(led->coldChannel), 1);
+  }
+  else
+  {
+    setDacVoltage1(mapTo15Bit(led->warmChannel), 0);
+    setDacVoltage1(mapTo15Bit(led->coldChannel), 1);
+  }
 }
 
 // NETWORK ///////////////////////////////////////////////////////////////////////
-
-bool isSSIDAvailable(const char *ssidToFind)
-{
-  if (ssidToFind == nullptr || *ssidToFind == '\0')
-  {
-    return false;
-  }
-
-  int scanAttempts = 0;
-  while (scanAttempts < maxScanAttempts)
-  {
-    int networkCount = WiFi.scanNetworks();
-    for (size_t i = 0; i < networkCount; ++i)
-    {
-      if (strcmp(WiFi.SSID(i).c_str(), ssidToFind) == 0)
-      {
-        return true; // Found the saved SSID
-      }
-    }
-    delay(scanInterval);
-    scanAttempts++;
-  }
-  return false; // Saved SSID not found after scanning
-}
-
-void WiFiEvent(WiFiEvent_t event)
-{
-  switch (event)
-  {
-  case ARDUINO_EVENT_WIFI_READY:
-    Serial.printf("WiFi Ready");
-    break;
-  case ARDUINO_EVENT_WIFI_SCAN_DONE:
-    Serial.printf("WiFi Scan Done");
-    break;
-  case ARDUINO_EVENT_WIFI_STA_START:
-    Serial.printf("WiFi STA Started");
-    break;
-  case ARDUINO_EVENT_WIFI_STA_STOP:
-    Serial.printf("WiFi STA Stopped");
-    break;
-  case ARDUINO_EVENT_WIFI_STA_CONNECTED:
-    Serial.printf("WiFi Connected");
-    break;
-  case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
-    Serial.printf("WiFi Disconnected");
-    break;
-  case ARDUINO_EVENT_WIFI_STA_AUTHMODE_CHANGE:
-    Serial.printf("WiFi Auth Mode Changed");
-    break;
-  case ARDUINO_EVENT_WIFI_STA_GOT_IP:
-    Serial.printf("WiFi Got IP: %s", WiFi.localIP().toString().c_str());
-    break;
-  case ARDUINO_EVENT_WIFI_STA_LOST_IP:
-    Serial.printf("WiFi Lost IP");
-    break;
-  case ARDUINO_EVENT_WIFI_AP_START:
-    Serial.printf("WiFi AP Started");
-    break;
-  case ARDUINO_EVENT_WIFI_AP_STOP:
-    Serial.printf("WiFi AP Stopped");
-    break;
-  case ARDUINO_EVENT_WIFI_AP_STACONNECTED:
-    Serial.printf("Station Connected to WiFi AP");
-    break;
-  case ARDUINO_EVENT_WIFI_AP_STADISCONNECTED:
-    Serial.printf("Station Disconnected from WiFi AP");
-    break;
-  case ARDUINO_EVENT_WIFI_AP_STAIPASSIGNED:
-    Serial.printf("Station IP Assigned in WiFi AP Mode");
-    break;
-  case ARDUINO_EVENT_WIFI_AP_PROBEREQRECVED:
-    Serial.printf("Probe Request Received in WiFi AP Mode");
-    break;
-  default:
-    break;
-  }
-}
-
-String scanWifiNetworks()
-{
-
-  int numNetworks = WiFi.scanNetworks();
-  if (numNetworks == WIFI_SCAN_FAILED)
-  {
-    Serial.printf("Wi-Fi scan failed!");
-    return "{}";
-  }
-  else if (numNetworks == 0)
-  {
-    Serial.printf("No networks found");
-    return "[]";
-  }
-
-  JsonDocument doc;
-  JsonArray networks = doc.to<JsonArray>();
-
-  for (size_t i = 0; i < numNetworks; ++i)
-  {
-    JsonObject network = networks.add<JsonObject>();
-    network["ssid"] = WiFi.SSID(i);
-    network["rssi"] = WiFi.RSSI(i);
-    network["channel"] = WiFi.channel(i);
-    network["encryption"] = WiFi.encryptionType(i);
-  }
-
-  String jsonResult;
-  serializeJson(doc, jsonResult);
-  Serial.printf("Scanned Wi-Fi Networks:");
-  Serial.printf("%s", jsonResult);
-
-  return jsonResult;
-}
 
 void checkNetwork(void *parameter)
 {
   for (;;)
   {
-    // Wait for either the periodic delay or the manual trigger event
     EventBits_t bits = xEventGroupWaitBits(
         networkEventGroup,
         MANUAL_TRIGGER_BIT,
-        pdTRUE,              // Clear the bit on exit
-        pdFALSE,             // Wait for any bit
-        pdMS_TO_TICKS(30000) // 30-second delay
-    );
+        pdTRUE,
+        pdFALSE,
+        pdMS_TO_TICKS(30000));
 
-    // Check if we need to connect to a Wi-Fi network
     if ((WiFi.softAPgetStationNum() == 0) && !WiFi.isConnected())
     {
+      network.prepWifi();
 
-      // Handle WiFi mode switching
-      if (WiFi.getMode() == WIFI_STA)
+      if (!network.connectSTA())
       {
-        WiFi.disconnect();
+        network.connectAP();
       }
-      if (WiFi.getMode() == WIFI_AP)
-      {
-        WiFi.softAPdisconnect();
-        dnsServer.stop();
-        WiFi.mode(WIFI_STA);
-      }
-
-      // Try to connect to the SSID if it's available
-      if (isSSIDAvailable(configData.ssid))
-      {
-        if (configData.useStaticWiFi)
-        {
-          WiFi.config(configData.Swifi_ip, configData.Swifi_gw, configData.Swifi_subnet, configData.Swifi_dns);
-        }
-        WiFi.begin(configData.ssid, configData.password);
-        Serial.printf("Connecting to %s", configData.ssid);
-
-        // Wait for up to 10 seconds to see if the connection is successful
-        unsigned long startTime = millis();
-        bool connected = false;
-        while (millis() - startTime < 10000)
-        { // 10 seconds timeout
-          if (WiFi.isConnected())
-          {
-            connected = true;
-            break;
-          }
-          vTaskDelay(pdMS_TO_TICKS(1000)); // Check every 500 milliseconds
-        }
-
-        if (connected)
-        {
-          // Successfully connected
-          Serial.printf("Successfully connected to %s", configData.ssid);
-          continue; // Exit the loop and wait for the next event
-        }
-        else
-        {
-          // Failed to connect
-          Serial.printf("Failed to connect to %s, switching to AP mode", configData.ssid);
-        }
-      }
-      else
-      {
-        Serial.printf("No Saved WiFi SSID, starting AP mode");
-      }
-
-      // Switch to AP mode
-      if (WiFi.getMode() == WIFI_STA)
-      {
-        WiFi.mode(WIFI_AP);
-      }
-      if (configData.useStaticWiFi)
-      {
-        WiFi.softAPConfig(apIP, apIP, IPAddress(255, 255, 255, 0));
-      }
-      WiFi.softAP(configData.devicename, softAP_password);
-      dnsServer.start(DNS_PORT, "*", apIP);
+      vTaskDelay(pdMS_TO_TICKS(1000));
     }
-
-    vTaskDelay(pdMS_TO_TICKS(1000)); // Short delay to avoid tight loop
   }
 }
-
 void AutoSave(void *parameter)
 {
   const TickType_t xMaxBlockTime = pdMS_TO_TICKS(1000); // Periodic timeout of 1000ms
@@ -426,7 +252,7 @@ void AutoSave(void *parameter)
     if (!CONFIG_SAVED && (millis() - lastInputTime >= 30000))
     {
       CONFIG_SAVED = true;
-      configData.save("/config.json");
+      config.save();
 
       Serial.printf("[SYSTEM] AUTOSAVING");
     }
@@ -437,7 +263,7 @@ void syncClients()
 {
 
   String bdata;
-  serializeJson(configData.get(), bdata);
+  serializeJson(config.write(), bdata);
   websocketHandler.sendAll(bdata.c_str());
 }
 
@@ -445,9 +271,32 @@ void syncClients()
 
 void serverInit()
 {
+  networkEventGroup = xEventGroupCreate();
 
   server.config.max_uri_handlers = 20; // maximum number of uri handlers (.on() calls)
+
+#ifdef PSY_ENABLE_SSL
+  server.ssl_config.httpd.max_uri_handlers = 20; // maximum number of uri handlers (.on() calls)
+
+  // do we want secure or not?
+  if (app_enable_ssl)
+  {
+    server.listen(443, server_cert.c_str(), server_key.c_str());
+
+    // this creates a 2nd server listening on port 80 and redirects all requests HTTPS
+    PsychicHttpServer *redirectServer = new PsychicHttpServer();
+    redirectServer->config.ctrl_port = 20424; // just a random port different from the default one
+    redirectServer->listen(80);
+    redirectServer->onNotFound([](PsychicRequest *request)
+                               {
+      String url = "https://" + request->host() + request->url();
+      return request->redirect(url.c_str()); });
+  }
+  else
+    server.listen(80);
+#else
   server.listen(80);
+#endif
 
   DefaultHeaders::Instance().addHeader("Server", "PsychicHttp");
 
@@ -456,8 +305,8 @@ void serverInit()
   handler->setCacheControl("max-age=60");
 
   websocketHandler.onOpen([](PsychicWebSocketClient *client)
-                          { 
-    Serial.printf( "[socket] connection #%u connected from %s\n", client->socket(), client->remoteIP().toString()); 
+                          {
+    Serial.printf("[socket] connection #%u connected from %s\n", client->socket(), client->remoteIP().toString().c_str());
     syncClients(); });
 
   websocketHandler.onFrame([](PsychicWebSocketRequest *request, httpd_ws_frame *frame)
@@ -474,7 +323,7 @@ void serverInit()
         int index = obj["index"];
         int warmCycle = obj["warmCycle"];
         int coldCycle = obj["coldCycle"];
-        ledData* led = configData.getLedData(index);
+        ledData* led = config.getLedData(index);
         led->warmCycle = warmCycle;
         led->coldCycle = coldCycle;
         setLedDutyCycle(index);
@@ -488,11 +337,8 @@ void serverInit()
 
       return ESP_OK;
     } });
-
   websocketHandler.onClose([](PsychicWebSocketClient *client)
-                           {
-                             // Serial.printf("[socket] connection #%u closed from %s", client->socket(), client->remoteIP());
-                           });
+                           { Serial.printf("[socket] connection #%u closed from %s", client->socket(), client->remoteIP()); });
 
   // attach the handler to /ws.  You can then connect to ws://ip.address/ws
   server.on("/ws", &websocketHandler);
@@ -501,11 +347,11 @@ void serverInit()
       //EventSource server
       // curl -i -N http://psychic.local/events
       eventSource.onOpen([](PsychicEventSourceClient *client) {
-        Serial.printf([eventsource] connection #%u connected from %s\n", client->socket(), client->remoteIP().toString());
+        logger.log(STOMPCS,INFO, "[eventsource] connection #%u connected from %s\n", client->socket(), client->remoteIP().toString());
         client->send("Hello user!", NULL, millis(), 1000);
       });
       eventSource.onClose([](PsychicEventSourceClient *client) {
-        Serial.printf([eventsource] connection #%u closed from %s\n", client->socket(), client->remoteIP().toString());
+        logger.log(STOMPCS,INFO, "[eventsource] connection #%u closed from %s\n", client->socket(), client->remoteIP().toString());
       });
       server.on("/events", &eventSource);
 
@@ -513,13 +359,13 @@ void serverInit()
 
   server.onOpen([](PsychicClient *client)
                 {
-                  // Serial.printf("[client connection #%u connected from %s", client->socket(), client->remoteIP());
+                  // logger.log(STOMPCS,DEBUG, "[client connection #%u connected from %s", client->socket(), client->remoteIP());
                   // syncClients();
                 });
 
   server.onClose([](PsychicClient *client)
                  {
-                   // Serial.printf("[client] connection #%u closed from %s", client->socket(), client->remoteIP());
+                   // logger.log(STOMPCS,DEBUG, "[client] connection #%u closed from %s", client->socket(), client->remoteIP());
                  });
 
   server.on("/redirect", HTTP_GET, [](PsychicRequest *request)
@@ -542,10 +388,10 @@ void serverInit()
               serializeJsonPretty(json, Serial);
               JsonObject doc = json.as<JsonObject>();
 
-              strncpy(configData.ssid, doc["ssid"], sizeof(configData.ssid));
-              strncpy(configData.password, doc["password"], sizeof(configData.password));
+              strncpy(config.network.ssid, doc["ssid"], sizeof(config.network.ssid));
+              strncpy(config.network.password, doc["password"], sizeof(config.network.password));
 
-              configData.save("/config.json");
+              config.save();
 
               request->reply("OK");
               WiFi.softAPdisconnect();
@@ -558,15 +404,15 @@ void serverInit()
       JsonObject doc = json.as<JsonObject>();
 
 
-      configData.useStaticWiFi = doc["Swifi"];
+      config.network.useStaticWiFi = doc["Swifi"];
 
-      configData.Swifi_ip.fromString(doc["Swifi_ip"].as<String>());
-      configData.Swifi_subnet.fromString(doc["Swifi_sub"].as<String>());
-      configData.Swifi_gw.fromString(doc["Swifi_gw"].as<String>());
-      configData.Swifi_dns.fromString(doc["Swifi_dns"].as<String>());
+      config.network.Swifi_ip.fromString(doc["Swifi_ip"].as<String>());
+      config.network.Swifi_subnet.fromString(doc["Swifi_sub"].as<String>());
+      config.network.Swifi_gw.fromString(doc["Swifi_gw"].as<String>());
+      config.network.Swifi_dns.fromString(doc["Swifi_dns"].as<String>());
 
       
-      configData.save("/config.json");
+      config.save();
 
       request->reply("OK");
       WiFi.softAPdisconnect();
@@ -576,7 +422,7 @@ void serverInit()
 
   server.on("/doScanWiFi", HTTP_GET, [](PsychicRequest *request)
             {
-      request->reply(scanWifiNetworks().c_str()); 
+      request->reply(network.scanWifi().c_str()); 
       return ESP_OK; });
 }
 
@@ -688,10 +534,6 @@ void AppEndDevice()
 
 void setup()
 {
-  sema_Server = xSemaphoreCreateMutex();
-
-  SERVER_GROUP = xEventGroupCreate();
-  networkEventGroup = xEventGroupCreate();
 
 #ifdef ALMALOOX_DEBUG
   Serial.begin(115200);
@@ -707,63 +549,69 @@ void setup()
   }
   else
   {
-    configData.load("/config.json");
+    config.load();
   }
 
   for (size_t i; i < LEDCOUNT; i++)
   {
-    ledData *led = configData.getLedData(i);
+    ledData *led = config.getLedData(i);
     ledcSetup(led->warmChannel, pwmFreq, pwmResolution);
     ledcSetup(led->coldChannel, pwmFreq, pwmResolution);
     ledcAttachPin(led->warmPin, led->warmChannel);
     ledcAttachPin(led->coldPin, led->coldChannel);
   }
 
-  WiFi.onEvent(WiFiEvent);
-
-  WiFi.mode(WIFI_STA);
-  WiFi.setHostname(configData.devicename);
-
-  Udp.begin(localPort);
-
-  if (MDNS.begin(configData.devicename))
-  {
-    MDNS.addService("http", "tcp", 80);
-    Serial.printf("MDNS: started");
-  }
-  else
-  {
-    Serial.printf("MDNS: failed to start");
-  }
-
+  network.init();
   serverInit();
 
-  xTaskCreate(AutoSave, "AutoSave", 4096, NULL, 2, &AutoSaveHandle);
-  xTaskCreate(checkNetwork, "checkNetwork", 2048, NULL, 1, &checkNetworksHandle);
+  xTaskCreate(checkNetwork, "checkNetwork", 4096, NULL, 1, &checkNetworksHandle);
   xEventGroupSetBits(networkEventGroup, MANUAL_TRIGGER_BIT);
   setLedDutyCycle(0);
   setLedDutyCycle(1);
 
+
+  for (uint8_t address = 0x58; address <= 0x59; address++) {
+    Wire.beginTransmission(address);
+    if (Wire.endTransmission() == 0) {
+      Serial.printf("Found I2C at: 0x%02X\n", address);
+    }
+    else {
+    }
+  }
+
+  
   if (GP8413_0.begin() != 0)
   {
     Serial.println("Init Fail!");
-  } else {
-        // set channel0
-    setDacVoltage0(0, 0);
+  }
+  else
+  {
+    Serial.println("INIT I2C 1 good");
+
+    ledData *led = config.getLedData(0);
+    // set channel0
+    setDacVoltage0(led->warmChannel, 0);
     // set channel1
-    setDacVoltage0(0, 1);
+    setDacVoltage0(led->coldChannel, 1);
   }
 
-
-    if (GP8413_1.begin() != 0)
+  if (GP8413_1.begin() != 0)
   {
     Serial.println("Init Fail!");
-  } else {
-        // set channel0
-    setDacVoltage1(0, 0);
-    // set channel1
-    setDacVoltage1(0, 1);
   }
+  else
+  {
+    Serial.println("INIT I2C 2 good");
+    ledData *led = config.getLedData(1);
+    // set channel0
+    setDacVoltage1(led->warmChannel, 0);
+    // set channel1
+    setDacVoltage1(led->coldChannel, 1);
+  }
+
+
+
+  xTaskCreate(AutoSave, "AutoSave", 4096, NULL, 2, &AutoSaveHandle);
 
   /*
 
@@ -900,17 +748,19 @@ void loop()
 {
 
   /*
+
+    // DNS server processing for AP mode
+  if (WiFi.getMode() == WIFI_AP || WiFi.getMode() == WIFI_AP_STA)
+  {
+    dnsServer.processNextRequest();
+  }
+
+
     if (digitalRead(5) == LOW)
     {
       Serial.printf("press Button\r\n");
     }
   */
-
-  // DNS server processing for AP mode
-  if (WiFi.getMode() == WIFI_AP || WiFi.getMode() == WIFI_AP_STA)
-  {
-    dnsServer.processNextRequest();
-  }
 
   /*
   #ifdef COORDINNATOR

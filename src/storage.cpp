@@ -20,7 +20,7 @@ bool StorageManager::mountLittleFS() {
         }
     }
 
-    configData.ModulErrorLittleFS = true;
+   // config.ModulErrorLittleFS = true;
     return false;
 }
 
