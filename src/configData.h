@@ -7,8 +7,8 @@
 struct ledData {
     uint8_t warmPin = 0;
     uint8_t coldPin = 0;
-    uint32_t warmCycle = 1024;
-    uint32_t coldCycle = 1024;
+    uint32_t mainBrightness = 0;
+    uint32_t colorBalance = 0;
     uint8_t coldChannel = 0;
     uint8_t warmChannel = 0;
     String position = "FRONT";
@@ -39,14 +39,15 @@ Network() = default;
 // Base struct for configuration data
 struct Hardware {
     char devicename[20] = "";
-    Hardware() = default;
     bool ModulErrorLittleFS = false;
+    Hardware() = default;
+
 };
 
 
 
 class ConfigManager {
-    public:
+public:
     ConfigManager() = default;
     Network network;
     Hardware hardware;
@@ -58,9 +59,10 @@ class ConfigManager {
     JsonDocument write();
     void checkDeviceName();
 
-    private:
+private:
     uint32_t hashAttributes(); 
-    std::vector<ledData> lampdata;
+    static constexpr size_t MAX_LAMPS = 2; // Define the maximum number of lamps
+    ledData lampdata[MAX_LAMPS];          // Fixed-size array on the stack
 };
 
 

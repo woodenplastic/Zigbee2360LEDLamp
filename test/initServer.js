@@ -1,11 +1,16 @@
 const WebSocket = require("ws");
 
 const config = {
+  config:{
+    "ssid": "hallol",
+    "devicename": "ALMALOOX",},
   leds: [
-    { index: 0, warmCycle: 0, coldCycle: 1013, position:"FRONT" },
-    { index: 1, warmCycle: 0, coldCycle: 1013, position:"AURA" },
-  ],
+    { index: 0, mainBrightnes: 555, colorBalance: 1024, position:"FRONT" },
+    { index: 1, mainBrightnes: 555, colorBalance: 0, position:"AURA" },
+  ]
+
 };
+
 
 // Create a WebSocket server on port 5500
 const wss = new WebSocket.Server({ port: 5500 });

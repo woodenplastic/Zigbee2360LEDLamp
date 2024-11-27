@@ -1,65 +1,82 @@
-html, body {
-  background-color: black;
+html,
+body {
+  background: black;
   font-family: Roboto, sans-serif;
-margin:0;
-padding:0;
-}
-.site-container {
-margin: 0 auto;
-max-width:500px;
-  padding: 5px;
+  margin: 0;
+  padding: 0;
   color: white;
+  text-align: center;
+  width: 100%;
+  background-attachment: fixed;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh; /* Make the body at least the height of the viewport */
 }
 
 .header {
-height:100px;
-font-size:30px;
+  position: fixed;
+  width: 100%;
+  height: 9%;
+  font-size: 30px;
+  color: black;
   display: flex;
   justify-content: center;
   align-items: center;
-background:white;
-}
-
-#logo {
-  max-width: 100%;
-  max-height: 100%;
+  background: white;
 }
 
 .footer {
-width:200px;
-margin: 0 auto;
-margin-top:50px;
-}
-
-.footer img{
-width:100%;
-}
-
-.slideshow-container {
-display:flex;
-  overflow: hidden;
-  margin-top: 20px;
-  margin-bottom: 20px;
-justify-content: space-between;
-}
-
-.slideshow-container img, svg {
+  color: white;
   width: 100%;
-  height: auto;
-}
-.slide-container {
-width:300px;
+  height: 100px;
+  display: flex;
+  justify-content: center;
+  align-items: baseline;
+  background: black;
 }
 
-.arrows {
-color:#ccc;
-font-size:60px;
-display:inline-block;
--webkit-transform:scale(2,1); /* Safari and Chrome */
--moz-transform:scale(2,1); /* Firefox */
--ms-transform:scale(2,1); /* IE 9 */
--o-transform:scale(2,1); /* Opera */
-transform:scale(1,2); /* W3C */
+.footer img {
+  height: 100px;
+}
+
+.content {
+  display: flex;
+  flex-wrap: nowrap;
+  flex-direction: row;
+  align-items: center;
+  flex: 1;
+}
+
+.content .container {
+  width: 50%;
+}
+
+.sliderContainers {
+  display: flex;
+  flex-direction: column;
+  flex-wrap: nowrap;
+}
+
+.position-label {
+  margin: 10px 0;
+  font-size: 1.5em;
+}
+
+
+
+input[type="checkbox"],
+.toggle-input {
+  display: none;
+}
+
+button,
+#uploadButton {
+  justify-content: center;
+  cursor: pointer;
+  transition: 500ms;
+  align-items: center;
+  user-select: none;
 }
 
 #caption {
@@ -69,69 +86,108 @@ transform:scale(1,2); /* W3C */
 }
 
 .slider-container {
-  text-align: center;
-  margin-top: 100px;
-  margin-bottom: 20px;
+  padding: 10px 0;
+  margin: 10px 0;
 }
 
 .slider-label {
-  font-size: 18px;
+  font-size: 1.5em;
   margin-bottom: 10px;
 }
 
-.slider {
-  width: 80%;
-  margin: 50px;
-  position: relative;
-}
-
-.slider input {
+.slider-container input {
   -webkit-appearance: none;
   width: 100%;
   height: 1px;
-  margin: 0px;
+  margin: 20px 0;
   border-radius: 50%;
   background: none;
   outline: none;
   opacity: 1;
-  -webkit-transition: .2s;
-  transition: opacity .2s;
+  -webkit-transition: 0.2s;
+  transition: opacity 0.2s;
+  position: relative;
 }
 
 .slider input:hover {
   opacity: 1;
 }
 
-.slider input::-webkit-slider-thumb {
-  -webkit-appearance: none;
+.slider-container input::-webkit-slider-thumb {
   appearance: none;
   width: 30px;
   height: 30px;
   border-radius: 50%;
   cursor: pointer;
-}
-
-.slider1 input::-webkit-slider-thumb {
-
-  background: rgb(255, 255, 255);
-}
-
-.slider2 input::-webkit-slider-thumb {
   background: white;
 }
 
 .slider1 {
-border-radius: 1px;
-height: 2px;
-  background: linear-gradient(to right, rgb(0, 0, 0), white);
+  height:80px;
+  border-radius: 1px;
+  background: linear-gradient(to right, 
+        rgb(0, 0, 0) 0%, 
+        white 100%) no-repeat,
+        linear-gradient(to bottom, 
+        transparent 100px, 
+        black calc(100% - 30%)) no-repeat;
+        background-size: 95% calc(100% - 90%);
+        background-position: center;
 }
 
 .slider2 {
-border-radius: 1px;
-height: 2px;
-  background: linear-gradient(to right, rgb(255, 200, 0), white);
+  height:80px;
+  border-radius: 1px;
+  background: linear-gradient(to right, 
+        rgb(255, 255, 255) 0%, 
+        rgb(251, 255, 0) 100%) no-repeat,
+        linear-gradient(to bottom, 
+        transparent 100px, 
+        black calc(100% - 30%)) no-repeat;
+        background-size: 95% calc(100% - 90%);
+        background-position: center;
 }
 
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 60px;
+  height: 34px;
+  margin: -10px 5px 15px;
+}
+
+.toggle-label {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 60px;
+  height: 34px;
+  border-radius: 17px;
+  background-color: #ccc;
+  cursor: pointer;
+  transition: background-color 0.4s ease;
+}
+
+.toggle-label:before {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background-color: #fff;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  transition: transform 0.4s ease;
+}
+
+.toggle-input:checked + .toggle-label {
+  background-color: #86d993;
+}
+
+.toggle-input:checked + .toggle-label:before {
+  transform: translateX(26px);
+}
 
 .wifi-button {
   position: relative;
@@ -151,23 +207,23 @@ height: 2px;
 
 .state {
   font-size: 1.2rem;
-  color:#28454e00;
+  color: grey;
 }
-
 
 .modal {
   display: none;
   position: fixed;
   z-index: 10;
-  top: 1em;
+  top: 0;
   max-height: calc(100vh - 80px);
   min-height: 25%;
-  width: inherit;
-  overflow-y: auto;
-  background-color: #000000;
-  padding: 20px;
-  padding-top: 0;
-  border: 1px solid #888;
+  width: 100%;
+  background: rgba(0, 0, 0, 0.36);
+  box-shadow: 0 4px 30px rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: white;
 }
 
 .modal-close:hover,
@@ -185,11 +241,8 @@ height: 2px;
   font-weight: bold;
 }
 
-
-
-
 .modal-background {
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.8);
   position: fixed;
   z-index: 2;
   bottom: 0;
@@ -199,14 +252,23 @@ height: 2px;
   display: none;
 }
 
-
-.nav-button {
-  
-  width:fit-content;
-  background:none;
-  font-size:1em;
-  border:0;
-  right:0;
-  position: absolute;
+.row {
+  display: grid;
+  grid-auto-flow: column;
+  grid-column-gap: 10px;
+  width: 100%;
 }
 
+.row-mobile {
+  display: flex;
+  flex-direction: row;
+}
+
+.nav-button {
+  width: fit-content;
+  background: none;
+  font-size: 1em;
+  border: 0;
+  right: 0;
+  position: absolute;
+}

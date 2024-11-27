@@ -14,7 +14,7 @@
 DFRobot_GP8XXX_IIC GP8413_0(RESOLUTION_15_BIT, 0x59, &Wire);
 DFRobot_GP8XXX_IIC GP8413_1(RESOLUTION_15_BIT, 0x58, &Wire);
 
-uint16_t mapTo15Bit(uint16_t value)
+uint16_t mapTo10000(uint16_t value)
 {
   // Ensure the input value is within the expected range
   if (value > 1024)
@@ -196,13 +196,14 @@ EventGroupHandle_t networkEventGroup;
 const int MANUAL_TRIGGER_BIT = BIT0;
 const int SYNC_CLIENTS_BIT = BIT1;
 
+/*
 void setLedDutyCycle(int index)
 {
 
-  ledData *led = config.getLedData(index);
+  const ledData *led = config.getLedData(index);
   // Constrain the values to be within the PWM range (0-255)
-  int pwm1 = constrain(led->warmCycle * 0.25, 0, 255);
-  int pwm2 = constrain(led->coldCycle * 0.25, 0, 255);
+  int pwm1 = constrain(led->mainBrightness * 0.25, 0, 255);
+  int pwm2 = constrain(led->colorBalance * 0.25, 0, 255);
 
   // Write the PWM values to the specified channels
   ledcWrite(led->warmChannel, pwm1);
@@ -210,16 +211,57 @@ void setLedDutyCycle(int index)
 
   if (index == 0)
   {
-    setDacVoltage0(mapTo15Bit(led->warmCycle), 0);
-    setDacVoltage0(mapTo15Bit(led->coldCycle), 1);
+    setDacVoltage0(mapTo10000(led->mainBrightness), 0);
+    setDacVoltage0(mapTo10000(led->colorBalance), 1);
   }
   else
   {
-    setDacVoltage1(mapTo15Bit(led->warmCycle), 0);
-    setDacVoltage1(mapTo15Bit(led->coldCycle), 1);
+    setDacVoltage1(mapTo10000(led->mainBrightness), 0);
+    setDacVoltage1(mapTo10000(led->colorBalance), 1);
   }
 
-  //Serial.printf("LED %d: Warm: %d, Cold: %d\n", index, led->warmCycle, led->coldCycle);
+  Serial.printf("LED %d: Warm: %d, Cold: %d\n", index, led->mainBrightness, led->colorBalance);
+}
+*/
+
+
+void setLedDutyCycle(int index)
+{
+    // Get LED data for the current index
+    const ledData *led = config.getLedData(index);
+
+    // Scale mainBrightness (0-1024) to the total brightness (0-255)
+    int totalBrightness = constrain(led->mainBrightness * 0.25, 0, 255);
+
+    // Calculate the proportion of warm and cold based on colorBalance (0-1024)
+    float warmRatio = constrain(led->colorBalance / 1024.0, 0.0, 1.0);
+    float coldRatio = 1.0 - warmRatio;
+
+    // Compute PWM values for warm and cold LEDs
+    int pwm1 = totalBrightness * warmRatio; // Warm LED brightness
+    int pwm2 = totalBrightness * coldRatio; // Cold LED brightness
+
+    // Write the PWM values to the specified channels
+    ledcWrite(led->warmChannel, pwm1);
+    ledcWrite(led->coldChannel, pwm2);
+
+    // Adjust DAC outputs for finer control if needed
+    if (index == 0)
+    {
+        setDacVoltage0(mapTo10000(pwm1 / 0.25), 0); // Convert back to 0-1024 range
+        setDacVoltage0(mapTo10000(pwm2 / 0.25), 1);
+    }
+    else
+    {
+        setDacVoltage1(mapTo10000(pwm1 / 0.25), 0);
+        setDacVoltage1(mapTo10000(pwm2 / 0.25), 1);
+    }
+
+    // Print debug information
+    Serial.printf(
+        "LED %d: Main Brightness: %d, Color Balance: %d, Warm PWM: %d, Cold PWM: %d\n", 
+        index, led->mainBrightness, led->colorBalance, pwm1, pwm2
+    );
 }
 
 // NETWORK ///////////////////////////////////////////////////////////////////////
@@ -319,11 +361,11 @@ void serverInit()
       if(!data.isNull()) {
         for (JsonObject item : doc["leds"].as<JsonArray>()) {
           int index = item["index"];
-          int warmCycle = item["warmCycle"];
-          int coldCycle = item["coldCycle"];
+          int mainBrightness = item["mainBrightness"];
+          int colorBalance = item["colorBalance"];
           ledData* led = config.getLedData(index);
-          led->warmCycle = warmCycle;
-          led->coldCycle = coldCycle;
+          led->mainBrightness = mainBrightness;
+          led->colorBalance = colorBalance;
           setLedDutyCycle(index);
         }
 
@@ -592,10 +634,10 @@ void setup()
 
     ledData *led = config.getLedData(0);
     // set channel0
-    setDacVoltage0(led->warmCycle, 0);
+    setDacVoltage0(led->mainBrightness, 0);
     // set channel1
-    setDacVoltage0(led->coldCycle, 1);
-    Serial.printf("LED %d: Warm: %d, Cold: %d\n", 0, led->warmCycle, led->coldCycle);
+    setDacVoltage0(led->colorBalance, 1);
+    Serial.printf("LED %d: Warm: %d, Cold: %d\n", 0, led->mainBrightness, led->colorBalance);
   }
 
   if (GP8413_1.begin() != 0)
@@ -607,10 +649,10 @@ void setup()
     Serial.println("INIT I2C 2 good");
     ledData *led = config.getLedData(1);
     // set channel0
-    setDacVoltage1(led->warmCycle, 0);
+    setDacVoltage1(led->mainBrightness, 0);
     // set channel1
-    setDacVoltage1(led->coldCycle, 1);
-    Serial.printf("LED %d: Warm: %d, Cold: %d\n", 1, led->warmCycle, led->coldCycle);
+    setDacVoltage1(led->colorBalance, 1);
+    Serial.printf("LED %d: Warm: %d, Cold: %d\n", 1, led->mainBrightness, led->colorBalance);
   }
 
   xTaskCreate(AutoSave, "AutoSave", 4096, NULL, 2, &AutoSaveHandle);

@@ -11,7 +11,7 @@ function poweron() {
   window.app.led_instances.forEach( led => {
     led.slider1.value = 0;
     led.slider2.value = 0;
-    const data = { "leds":[{"index":led.index, "warmCycle": led.slider1.value, "coldCycle": led.slider2.value}]};
+    const data = { "leds":[{"index":led.index, "mainBrightness": led.slider1.value, "colorBalance": led.slider2.value}]};
     window.app.wsJson.send(JSON.stringify(data));
   })
 }
@@ -140,26 +140,24 @@ class WebSocketJson {
     }
   
     createElements(data) {
-
-          // Check if the element already exists
-    this.slidercontainer = document.getElementById(`sliderContainer_${this.index}`);
-    if (this.slidercontainer) {
-      console.log(`Element for index ${this.index} already exists.`);
-      return;
-    }
-
+      // Check if the element already exists
+      this.slidercontainer = document.getElementById(`sliderContainer_${this.index}`);
+      if (this.slidercontainer) {
+          console.log(`Element for index ${this.index} already exists.`);
+          return;
+      }
+  
       this.slidercontainer = document.createElement('div');
       this.slidercontainer.id = `sliderContainer_${this.index}`;
       this.slidercontainer.className = 'slider-container';
-      
-      this.sliderlabel = document.createElement('div');
-      this.sliderlabel.className = 'slider-label';
-      this.sliderlabel.innerHTML = `${this.position}`;
-      //this.sliderlabel.innerHTML = "FRONT";
-
+  
+      this.positionLabel = document.createElement('div');
+      this.positionLabel.className = 'position-label';
+      this.positionLabel.innerHTML = `${this.position}`;
+  
       this.slidercontainer1 = document.createElement('div');
-      this.slidercontainer1.className = 'slider slider1';
-
+      this.slidercontainer1.className = 'slider1';
+  
       this.slider1 = document.createElement('input');
       this.slider1.type = 'range';
       this.slider1.className = 'slider';
@@ -167,50 +165,49 @@ class WebSocketJson {
       this.slider1.min = 0;
       this.slider1.max = 1024;
       this.slider1.step = 10;
-      this.slider1.value = data.warmCycle;
-
-      this.slider1text = document.createElement('p');
-      this.slider1text.className = 'state';
-      this.slider1text.id = `slider1text_${this.index}`;
-      this.slider1text.innerHTML = `Brightness: <span id="sliderValue_${this.index}"></span> &percnt`;
-
-
+      this.slider1.value = data.mainBrightness;
+  
+      this.slider1label = document.createElement('label');
+      this.slider1label.className = 'state';
+      this.slider1label.setAttribute('for', `slider1_${this.index}`);
+      this.slider1label.innerHTML = `Brightness:`;
+  
       this.slidercontainer2 = document.createElement('div');
-      this.slidercontainer2.className = 'slider slider2';
-
+      this.slidercontainer2.className = 'slider2';
+  
       this.slider2 = document.createElement('input');
       this.slider2.type = 'range';
-      this.slider2.className = 'slider';
+      this.slider2.className = 'slider1';
       this.slider2.id = `slider2_${this.index}`;
       this.slider2.min = 0;
       this.slider2.max = 1024;
       this.slider2.step = 10;
-      this.slider2.value = data.coldCycle;
-
-      this.slider2text = document.createElement('p');
-      this.slider2text.className = 'state';
-      this.slider2text.id = `slider2text_${this.index}`;
-      this.slider2text.innerHTML = `Brightness: <span id="slider2Value_${this.index}"></span> &percnt`;
-
-
-      this.slidercontainer.appendChild(this.sliderlabel);
-
+      this.slider2.value = data.colorBalance;
+  
+      this.slider2label = document.createElement('label');
+      this.slider2label.className = 'state';
+      this.slider2label.setAttribute('for', `slider2_${this.index}`);
+      this.slider2label.innerHTML = `Color Balance:`;
+  
+      // Build the DOM structure
+      this.slidercontainer.appendChild(this.positionLabel);
+  
       this.slidercontainer.appendChild(this.slidercontainer1);
+      this.slidercontainer1.appendChild(this.slider1label);
       this.slidercontainer1.appendChild(this.slider1);
-      this.slidercontainer1.appendChild(this.slider1text);
-
+  
       this.slidercontainer.appendChild(this.slidercontainer2);
+      this.slidercontainer2.appendChild(this.slider2label);
       this.slidercontainer2.appendChild(this.slider2);
-      this.slidercontainer2.appendChild(this.slider2text);
-
+  
       this.positionContainer.appendChild(this.slidercontainer);
-    }
+  }
   
     addEventListeners() {
   
       this.slidercontainer.querySelectorAll('input').forEach(element => {
         element.addEventListener('input', () => {
-          const data = { "leds":[{"index":this.index, "warmCycle": this.slider1.value, "coldCycle": this.slider2.value}]};
+          const data = { "leds":[{"index":this.index, "mainBrightness": this.slider1.value, "colorBalance": this.slider2.value}]};
           window.app.wsJson.send(JSON.stringify(data));
 
         });
@@ -219,8 +216,8 @@ class WebSocketJson {
     }
 
     set(data) {
-         this.slider1.value = data.warmCycle
-         this.slider2.value = data.coldCycle
+         this.slider1.value = data.mainBrightness
+         this.slider2.value = data.colorBalance
         // this.sliderlabel.innerHTML = data.position
     }
   
@@ -538,8 +535,8 @@ async function handleSaveWifi() {
 
       window.app.networkModal = new ModalBase("wifi_modal");
       
-      window.app.wsJson = new WebSocketJson("ws://" + window.location.hostname + "/ws");
-      //wsJson = new WebSocketJson(`ws://localhost:5500/ws`);
+      //window.app.wsJson = new WebSocketJson("ws://" + window.location.hostname + "/ws");
+      window.app.wsJson = new WebSocketJson(`ws://localhost:5500/ws`);
       document.getElementById("powerButton").addEventListener("click", poweron);
 
     });
