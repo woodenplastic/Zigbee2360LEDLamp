@@ -535,8 +535,8 @@ async function handleSaveWifi() {
 
       window.app.networkModal = new ModalBase("wifi_modal");
       
-      //window.app.wsJson = new WebSocketJson("ws://" + window.location.hostname + "/ws");
-      window.app.wsJson = new WebSocketJson(`ws://localhost:5500/ws`);
+      window.app.wsJson = new WebSocketJson("ws://" + window.location.hostname + "/ws");
+      //window.app.wsJson = new WebSocketJson(`ws://localhost:5500/ws`);
       document.getElementById("powerButton").addEventListener("click", poweron);
 
     });
