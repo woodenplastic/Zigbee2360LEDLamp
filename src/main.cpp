@@ -189,12 +189,7 @@ unsigned long lastInputTime = 0; // Initialize to 0
 bool CONFIG_SAVED = true;        // Initialize as true to prevent immediate saving
 
 TaskHandle_t AutoSaveHandle = NULL;
-TaskHandle_t checkNetworksHandle = NULL;
 
-EventGroupHandle_t networkEventGroup;
-
-const int MANUAL_TRIGGER_BIT = BIT0;
-const int SYNC_CLIENTS_BIT = BIT1;
 
 /*
 void setLedDutyCycle(int index)
@@ -266,21 +261,6 @@ void setLedDutyCycle(int index)
 
 // NETWORK ///////////////////////////////////////////////////////////////////////
 
-void checkNetwork(void *parameter)
-{
-  for (;;)
-  {
-    EventBits_t bits = xEventGroupWaitBits(
-        networkEventGroup,
-        MANUAL_TRIGGER_BIT,
-        pdTRUE,
-        pdFALSE,
-        pdMS_TO_TICKS(30000));
-
-    network.check();
-    vTaskDelay(1);
-  }
-}
 
 void AutoSave(void *parameter)
 {
@@ -433,9 +413,7 @@ void serverInit()
               config.save();
 
               request->reply("OK");
-              WiFi.softAPdisconnect();
-              
-              xEventGroupSetBits(networkEventGroup, MANUAL_TRIGGER_BIT);
+              network.freshConnect();
               return ESP_OK; });
 
   server.on("/credSWifi", HTTP_POST, [](PsychicRequest *request, JsonVariant &json)
@@ -454,9 +432,7 @@ void serverInit()
       config.save();
 
       request->reply("OK");
-      WiFi.softAPdisconnect();
-      
-      xEventGroupSetBits(networkEventGroup, MANUAL_TRIGGER_BIT);
+      network.freshConnect();
       return ESP_OK; });
 
   server.on("/doScanWiFi", HTTP_GET, [](PsychicRequest *request)
@@ -601,13 +577,9 @@ void setup()
     ledcAttachPin(led->coldPin, led->coldChannel);
   }
 
-  networkEventGroup = xEventGroupCreate();
-
   network.init();
   serverInit();
 
-  xTaskCreate(checkNetwork, "checkNetwork", 4096, NULL, 1, &checkNetworksHandle);
-  xEventGroupSetBits(networkEventGroup, MANUAL_TRIGGER_BIT);
 
   setLedDutyCycle(0);
   setLedDutyCycle(1);
