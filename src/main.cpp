@@ -637,7 +637,6 @@ void setup()
     setDacVoltage0(led->mainBrightness, 0);
     // set channel1
     setDacVoltage0(led->colorBalance, 1);
-    Serial.printf("LED %d: Warm: %d, Cold: %d\n", 0, led->mainBrightness, led->colorBalance);
   }
 
   if (GP8413_1.begin() != 0)
@@ -652,7 +651,6 @@ void setup()
     setDacVoltage1(led->mainBrightness, 0);
     // set channel1
     setDacVoltage1(led->colorBalance, 1);
-    Serial.printf("LED %d: Warm: %d, Cold: %d\n", 1, led->mainBrightness, led->colorBalance);
   }
 
   xTaskCreate(AutoSave, "AutoSave", 4096, NULL, 2, &AutoSaveHandle);
